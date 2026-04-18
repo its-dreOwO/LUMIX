@@ -1,13 +1,29 @@
-// Mirror the font families from project/LUMIX.html
+// Font family strings — must match the keys passed to useFonts() in _layout.tsx
 export const fonts = {
-  display: 'SpaceGrotesk',      // Space Grotesk — headings, labels, nav
-  body: 'Inter',                // Inter — body text, inputs
-  mono: 'JetBrainsMono',        // JetBrains Mono — timestamps, codes, tags
+  // Space Grotesk — headings, nav labels, large numbers
+  displayLight: 'SpaceGrotesk_300Light',
+  display: 'SpaceGrotesk_400Regular',
+  displayMedium: 'SpaceGrotesk_500Medium',
+  displaySemiBold: 'SpaceGrotesk_600SemiBold',
+  displayBold: 'SpaceGrotesk_700Bold',
+
+  // Inter — body text, inputs, bubbles
+  bodyLight: 'Inter_300Light',
+  body: 'Inter_400Regular',
+  bodyMedium: 'Inter_500Medium',
+  bodySemiBold: 'Inter_600SemiBold',
+
+  // JetBrains Mono — timestamps, tags, status labels
+  mono: 'JetBrainsMono_400Regular',
+  monoMedium: 'JetBrainsMono_500Medium',
 } as const;
 
+export type FontKey = keyof typeof fonts;
+
 export const fontSizes = {
-  xs: 8.5,
-  sm: 9.5,
+  xxs: 8.5,
+  xs: 9.5,
+  sm: 10.5,
   base: 11,
   md: 12,
   lg: 13,
@@ -16,14 +32,6 @@ export const fontSizes = {
   '3xl': 28,
   '4xl': 36,
 } as const;
-
-export const fontWeights = {
-  light: '300' as const,
-  regular: '400' as const,
-  medium: '500' as const,
-  semibold: '600' as const,
-  bold: '700' as const,
-};
 
 export const letterSpacings = {
   tight: -0.02,
