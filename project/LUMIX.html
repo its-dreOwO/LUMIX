@@ -1,0 +1,1073 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LUMIX — Organic Cyber-Fluidity</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg-0: #000000;
+    --bg-1: #09090E;
+    --cyan: #00F0FF;
+    --violet: #8A2BE2;
+    --white: #FFFFFF;
+    --silver: #A0A0A5;
+    --glass-fill: rgba(255,255,255,0.03);
+    --glass-border: rgba(255,255,255,0.10);
+    --glass-border-strong: rgba(255,255,255,0.18);
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #000;
+    color: #fff;
+    font-family: 'Inter', system-ui, sans-serif;
+    height: 100%;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #root { width: 100%; height: 100vh; }
+
+  /* ---- Phone frame ---- */
+  .phone-stage {
+    position: relative;
+    width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(ellipse at 50% 50%, #0a0a10 0%, #050507 60%, #000 100%);
+    overflow: hidden;
+  }
+  .phone-scale {
+    transform-origin: center;
+    transition: transform 0.2s ease;
+  }
+  .phone {
+    position: relative;
+    width: 390px; height: 820px;
+    border-radius: 52px;
+    background: #000;
+    border: 2px solid rgba(255,255,255,0.08);
+    box-shadow:
+      0 0 0 10px #111217,
+      0 0 0 11px rgba(255,255,255,0.06),
+      0 40px 80px -10px rgba(0,0,0,0.8),
+      0 0 120px rgba(0,240,255,0.08);
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .phone-screen {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse at 50% 30%, #0e0d17 0%, #09090E 45%, #000 100%);
+  }
+  /* Status bar */
+  .phone-status {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 44px;
+    padding: 14px 28px 0;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 13px; font-weight: 600;
+    color: #fff;
+    z-index: 20;
+    pointer-events: none;
+  }
+  .phone-notch {
+    position: absolute;
+    top: 10px; left: 50%;
+    transform: translateX(-50%);
+    width: 100px; height: 28px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 21;
+  }
+  .phone-status-icons { display: flex; gap: 6px; align-items: center; }
+  .phone-status-icons svg { opacity: 0.95; }
+  /* Home indicator */
+  .phone-home {
+    position: absolute;
+    bottom: 8px; left: 50%;
+    transform: translateX(-50%);
+    width: 130px; height: 4px;
+    background: rgba(255,255,255,0.35);
+    border-radius: 3px;
+    z-index: 20;
+  }
+
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .display { font-family: 'Space Grotesk', sans-serif; letter-spacing: -0.01em; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,240,255,0.3); }
+
+  /* Keyframes */
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
+  }
+  @keyframes breathe-strong {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.05); filter: brightness(1.5); }
+  }
+  @keyframes orbSwirl {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  @keyframes orbSwirlFast {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  @keyframes pulseRing {
+    0% { transform: scale(0.8); opacity: 0.9; }
+    100% { transform: scale(3); opacity: 0; }
+  }
+  @keyframes fadeUp {
+    0% { opacity: 0; transform: translateY(8px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes raceBorder {
+    0% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: -1000; }
+  }
+  @keyframes liveDot {
+    0%, 100% { opacity: 0.6; box-shadow: 0 0 0 0 rgba(0, 240, 255, 0.6); }
+    50% { opacity: 1; box-shadow: 0 0 0 6px rgba(0, 240, 255, 0); }
+  }
+  @keyframes floatY {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .glass {
+    background: var(--glass-fill);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255,255,255,0.08),
+      inset 0 -1px 0 0 rgba(0,0,0,0.3),
+      0 10px 40px -10px rgba(0,0,0,0.6);
+  }
+
+  /* Race border effect on focus — slow single light traveling the perimeter */
+  .race-border {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    overflow: visible;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+  }
+  .race-border svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .race-border rect {
+    fill: none;
+    stroke-width: 1.2;
+    rx: 28;
+    ry: 28;
+    stroke-dasharray: 40 1000;
+    animation: raceBorder 9s linear infinite;
+  }
+  .focused > .race-border { opacity: 1; }
+
+  /* Particle canvas — fills the phone screen */
+  #particles {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .app-shell {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    overflow: hidden;
+    padding-top: 44px;
+    padding-bottom: 24px;
+  }
+
+  /* Top nav */
+  .topnav {
+    position: absolute;
+    top: 52px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    gap: 2px;
+    padding: 4px;
+    border-radius: 100px;
+  }
+  .topnav button {
+    background: transparent;
+    border: none;
+    color: var(--silver);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 8px 18px;
+    border-radius: 100px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+  }
+  .topnav button.active {
+    background: rgba(255,255,255,0.06);
+    color: #fff;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1), 0 0 20px rgba(0,240,255,0.15);
+  }
+  .topnav button:hover:not(.active) { color: #fff; }
+
+
+  /* --- NEXUS screen --- */
+  .nexus {
+    position: relative;
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+
+  .orb-wrap {
+    position: relative;
+    width: 220px; height: 220px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .orb-glow {
+    position: absolute;
+    width: 380px; height: 380px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,240,255,0.18) 0%, rgba(138,43,226,0.12) 40%, transparent 70%);
+    filter: blur(40px);
+    pointer-events: none;
+  }
+  .orb {
+    position: relative;
+    width: 170px; height: 170px;
+    border-radius: 50%;
+    animation: breathe 5s ease-in-out infinite;
+    transform-origin: center;
+  }
+  .orb.active { animation: breathe-strong 1.4s ease-in-out infinite; }
+  .orb-shell {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle at 35% 30%, rgba(255,255,255,0.35), transparent 40%),
+      radial-gradient(circle at 65% 70%, rgba(138,43,226,0.55), transparent 55%),
+      radial-gradient(circle at 40% 75%, rgba(0,240,255,0.45), transparent 55%),
+      #0a0a12;
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow:
+      inset 0 0 40px rgba(0,240,255,0.25),
+      inset 0 0 80px rgba(138,43,226,0.2),
+      0 0 60px rgba(0,240,255,0.25),
+      0 0 120px rgba(138,43,226,0.15);
+    overflow: hidden;
+  }
+  .orb-swirl {
+    position: absolute; inset: -20%;
+    background:
+      conic-gradient(from 0deg,
+        transparent 0deg,
+        rgba(0,240,255,0.4) 60deg,
+        transparent 120deg,
+        rgba(138,43,226,0.5) 200deg,
+        transparent 260deg,
+        rgba(0,240,255,0.3) 320deg,
+        transparent 360deg);
+    animation: orbSwirl 12s linear infinite;
+    mix-blend-mode: screen;
+    filter: blur(10px);
+  }
+  .orb.active .orb-swirl { animation-duration: 3s; }
+  .orb-inner-swirl {
+    position: absolute; inset: 15%;
+    border-radius: 50%;
+    background:
+      conic-gradient(from 180deg,
+        rgba(138,43,226,0.3) 0deg,
+        transparent 90deg,
+        rgba(0,240,255,0.5) 180deg,
+        transparent 270deg,
+        rgba(138,43,226,0.3) 360deg);
+    animation: orbSwirl 8s linear infinite reverse;
+    filter: blur(6px);
+  }
+  .orb.active .orb-inner-swirl { animation-duration: 2s; }
+  .orb-core {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 40%; height: 40%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,255,255,0.6) 0%, rgba(0,240,255,0.3) 40%, transparent 70%);
+    filter: blur(8px);
+  }
+  .pulse-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(0,240,255,0.5);
+    animation: pulseRing 1.4s ease-out infinite;
+    pointer-events: none;
+  }
+
+  .greeting {
+    position: absolute;
+    top: 110px;
+    left: 50%; transform: translateX(-50%);
+    text-align: center;
+    pointer-events: none;
+    animation: fadeUp 1.2s ease-out;
+    width: 100%;
+  }
+  .greeting .time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: rgba(160,160,165,0.7);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .greeting h1 {
+    margin: 0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 300;
+    font-size: 28px;
+    letter-spacing: -0.02em;
+    color: rgba(255,255,255,0.92);
+    text-shadow:
+      0 0 30px rgba(0,240,255,0.4),
+      0 0 80px rgba(138,43,226,0.25);
+  }
+  .greeting h1 .em {
+    background: linear-gradient(90deg, #00F0FF 0%, #8A2BE2 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-weight: 500;
+  }
+  .greeting p {
+    margin: 8px 0 0;
+    font-size: 11px;
+    color: rgba(160,160,165,0.8);
+    letter-spacing: 0.05em;
+  }
+
+  /* Chat transcript — floats around the orb */
+  .transcript {
+    position: absolute;
+    left: 50%;
+    bottom: 170px;
+    transform: translateX(-50%);
+    width: calc(100% - 32px);
+    max-height: 130px;
+    overflow-y: auto;
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    mask-image: linear-gradient(to bottom, transparent 0, black 20px, black calc(100% - 10px), transparent 100%);
+    pointer-events: auto;
+  }
+  .msg {
+    max-width: 85%;
+    padding: 9px 13px;
+    border-radius: 16px;
+    font-size: 12px;
+    line-height: 1.45;
+    animation: fadeUp 0.4s ease-out;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+  .msg.user {
+    align-self: flex-end;
+    background: linear-gradient(135deg, rgba(0,240,255,0.12), rgba(138,43,226,0.08));
+    border: 1px solid rgba(0,240,255,0.25);
+    color: #fff;
+    border-bottom-right-radius: 6px;
+  }
+  .msg.ai {
+    align-self: flex-start;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.92);
+    border-bottom-left-radius: 6px;
+  }
+  .msg .label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: rgba(160,160,165,0.6);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .msg.ai .label { color: rgba(0,240,255,0.6); }
+
+  /* Input area */
+  .input-dock {
+    position: absolute;
+    left: 50%;
+    bottom: 60px;
+    transform: translateX(-50%);
+    width: calc(100% - 24px);
+    z-index: 5;
+  }
+  .input-box {
+    position: relative;
+    border-radius: 24px;
+    padding: 6px 6px 6px 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .input-box input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    padding: 8px 2px;
+    min-width: 0;
+  }
+  .input-box input::placeholder { color: rgba(160,160,165,0.5); }
+  .input-btn {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.03);
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+  }
+  .input-btn:hover {
+    color: #00F0FF;
+    border-color: rgba(0,240,255,0.4);
+    box-shadow: 0 0 16px rgba(0,240,255,0.3);
+  }
+  .input-btn.send {
+    background: linear-gradient(135deg, rgba(0,240,255,0.25), rgba(138,43,226,0.25));
+    border: 1px solid rgba(0,240,255,0.4);
+    color: #fff;
+  }
+  .input-btn.send:hover {
+    background: linear-gradient(135deg, rgba(0,240,255,0.45), rgba(138,43,226,0.45));
+    box-shadow: 0 0 24px rgba(0,240,255,0.5);
+  }
+
+  .quick-suggest {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 0 2px 2px;
+    scrollbar-width: none;
+  }
+  .quick-suggest::-webkit-scrollbar { display: none; }
+  .chip {
+    padding: 6px 11px;
+    border-radius: 100px;
+    font-size: 10.5px;
+    color: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(20px);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .chip:hover {
+    background: rgba(0,240,255,0.08);
+    border-color: rgba(0,240,255,0.35);
+    color: #fff;
+  }
+
+  /* --- DASHBOARD screen (mobile stacked) --- */
+  .dashboard {
+    position: relative;
+    width: 100%; height: 100%;
+    padding: 100px 14px 70px;
+    overflow-y: auto;
+  }
+  .dash-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .card {
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    animation: fadeUp 0.6s ease-out backwards;
+  }
+  .card .card-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    color: rgba(160,160,165,0.7);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .card .live-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: #00F0FF;
+    box-shadow: 0 0 8px #00F0FF;
+    animation: liveDot 2s infinite;
+  }
+
+  /* Weather card */
+  .weather-card {
+    min-height: 170px;
+    position: relative;
+    overflow: hidden;
+    transition: background 2s ease;
+  }
+  .weather-card.sun {
+    background: linear-gradient(135deg, rgba(255,180,80,0.14), rgba(255,120,40,0.05) 60%, rgba(255,255,255,0.02));
+  }
+  .weather-card.smog {
+    background: linear-gradient(135deg, rgba(150,150,160,0.14), rgba(100,100,110,0.05) 60%, rgba(255,255,255,0.02));
+  }
+  .weather-card.cold {
+    background: linear-gradient(135deg, rgba(100,180,255,0.14), rgba(120,100,220,0.05) 60%, rgba(255,255,255,0.02));
+  }
+  .weather-card h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 400;
+    font-size: 20px;
+    line-height: 1.3;
+    max-width: 230px;
+    margin: 10px 0 0;
+    color: rgba(255,255,255,0.95);
+    letter-spacing: -0.01em;
+  }
+  .weather-card h2 em {
+    font-style: normal;
+    background: linear-gradient(90deg, #00F0FF, #8A2BE2);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .weather-temp {
+    position: absolute;
+    right: 18px; top: 18px;
+    text-align: right;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .weather-temp .big { font-size: 36px; font-weight: 300; line-height: 1; }
+  .weather-temp .sub { font-size: 9px; color: var(--silver); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 4px; }
+  .weather-meta {
+    position: absolute;
+    bottom: 14px; left: 16px;
+    right: 16px;
+    display: flex; gap: 14px;
+    flex-wrap: wrap;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--silver);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .weather-meta span b { color: #fff; font-weight: 500; margin-left: 4px; }
+
+  /* Calendar + Notes row (side by side on mobile) */
+  .dash-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .calendar-card { min-height: 190px; }
+  .event-row {
+    display: flex; align-items: flex-start;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .event-row:last-child { border-bottom: none; }
+  .event-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    color: var(--silver);
+    letter-spacing: 0.08em;
+    width: 38px;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+  .event-title { font-size: 11px; color: #fff; font-weight: 500; margin: 0 0 1px; line-height: 1.25; }
+  .event-sub { font-size: 9.5px; color: var(--silver); margin: 0; line-height: 1.25; }
+  .event-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    margin: 6px 6px 0 0;
+    flex-shrink: 0;
+  }
+  .event-dot.cyan { background: #00F0FF; box-shadow: 0 0 8px rgba(0,240,255,0.6); }
+  .event-dot.violet { background: #8A2BE2; box-shadow: 0 0 8px rgba(138,43,226,0.6); }
+  .event-dot.silver { background: var(--silver); }
+
+  /* Notes card */
+  .notes-card { min-height: 190px; }
+  .note-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0;
+    font-size: 10.5px;
+    color: rgba(255,255,255,0.82);
+    border-bottom: 1px dashed rgba(255,255,255,0.05);
+    gap: 6px;
+  }
+  .note-item span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .note-item:last-child { border-bottom: none; }
+  .note-item .tt {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    color: rgba(160,160,165,0.6);
+    letter-spacing: 0.08em;
+    flex-shrink: 0;
+  }
+  .notes-add {
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 12px;
+    background: rgba(0,240,255,0.04);
+    border: 1px dashed rgba(0,240,255,0.25);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: rgba(255,255,255,0.85);
+    font-size: 10.5px;
+  }
+  .plus-mark {
+    width: 18px; height: 18px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle, rgba(0,240,255,0.3), transparent 70%);
+    color: #00F0FF;
+    font-size: 13px;
+    box-shadow: 0 0 10px rgba(0,240,255,0.4);
+  }
+
+  /* Briefing */
+  .briefing-card { min-height: 190px; }
+  .brief-item {
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .brief-item:last-child { border-bottom: none; }
+  .brief-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    letter-spacing: 0.2em;
+    color: rgba(0,240,255,0.7);
+    text-transform: uppercase;
+    margin-bottom: 3px;
+  }
+  .brief-head {
+    font-size: 11px;
+    line-height: 1.4;
+    color: rgba(255,255,255,0.9);
+  }
+
+  /* Telemetry HUD (mobile) */
+  .telemetry-card {
+    min-height: 240px;
+    padding: 16px;
+  }
+  .telemetry-row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 14px;
+    align-items: center;
+  }
+  .telemetry-gauges {
+    display: flex; flex-direction: column; gap: 10px;
+    flex: 1;
+  }
+  .ring-wrap {
+    position: relative;
+    width: 96px; height: 96px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .ring-center {
+    position: absolute;
+    inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+  }
+  .ring-center .pct {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 24px;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+  }
+  .ring-center .pct span { font-size: 12px; color: var(--silver); }
+  .ring-center .lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 7.5px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--silver);
+    margin-top: 2px;
+  }
+
+  .gauge {
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .gauge .gauge-head {
+    display: flex; justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--silver);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .gauge .gauge-head b { color: #fff; font-weight: 500; }
+  .gauge .gauge-bar {
+    position: relative;
+    height: 3px;
+    background: rgba(255,255,255,0.06);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .gauge .gauge-fill {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    background: linear-gradient(90deg, #00F0FF, #8A2BE2);
+    border-radius: 2px;
+    box-shadow: 0 0 8px rgba(0,240,255,0.6);
+  }
+  .gauge .gauge-segs {
+    display: flex; gap: 2px; height: 8px;
+  }
+  .gauge .gauge-segs .seg {
+    flex: 1;
+    background: rgba(255,255,255,0.06);
+    border-radius: 1px;
+  }
+  .gauge .gauge-segs .seg.on {
+    background: linear-gradient(180deg, #00F0FF, rgba(0,240,255,0.5));
+    box-shadow: 0 0 4px rgba(0,240,255,0.6);
+  }
+
+  .connectivity {
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .conn-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .conn-row .name {
+    font-size: 10.5px; color: #fff;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .conn-row .sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8.5px;
+    color: var(--silver);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+  .toggle {
+    width: 34px; height: 18px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.08);
+    position: relative;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: all 0.2s ease;
+  }
+  .toggle .knob {
+    position: absolute;
+    top: 1px; left: 1px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #A0A0A5;
+    transition: all 0.25s ease;
+  }
+  .toggle.on {
+    background: rgba(0,240,255,0.2);
+    border-color: rgba(0,240,255,0.4);
+    box-shadow: 0 0 10px rgba(0,240,255,0.3);
+  }
+  .toggle.on .knob {
+    left: 17px;
+    background: #00F0FF;
+    box-shadow: 0 0 8px #00F0FF;
+  }
+
+  /* Tweaks Panel */
+  .tweaks-panel {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 280px;
+    z-index: 50;
+    padding: 18px;
+    display: none;
+  }
+  .tweaks-panel.open { display: block; animation: fadeUp 0.35s ease-out; }
+  .tweaks-panel h3 {
+    margin: 0 0 14px;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: #fff;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .tweaks-panel h3 .close {
+    cursor: pointer; color: var(--silver);
+    font-weight: 400; font-size: 14px;
+  }
+  .tweak-row { margin-bottom: 12px; }
+  .tweak-row label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--silver);
+    margin-bottom: 6px;
+  }
+  .tweak-options {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .tweak-opt {
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.7);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Inter', sans-serif;
+  }
+  .tweak-opt.active {
+    background: rgba(0,240,255,0.12);
+    border-color: rgba(0,240,255,0.4);
+    color: #fff;
+  }
+  .tweak-swatch { width: 28px; height: 28px; border-radius: 50%; padding: 0; }
+  .tweak-swatch.active { box-shadow: 0 0 0 2px rgba(0,240,255,0.6), 0 0 12px rgba(0,240,255,0.4); }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script>
+  // ============================================================
+  // Particle field — floating nano-dots with pulse repulsion
+  // ============================================================
+  window.LUMIX_startParticles = () => {
+    const canvas = document.getElementById('particles');
+    if (!canvas || canvas.__started) return;
+    canvas.__started = true;
+    const ctx = canvas.getContext('2d');
+    let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+    let particles = [];
+    let pulses = [];
+    let paletteHue = { cyan: '#00F0FF', violet: '#8A2BE2' };
+
+    function resize() {
+      const parent = canvas.parentElement;
+      const rect = parent ? parent.getBoundingClientRect() : canvas.getBoundingClientRect();
+      const w = Math.max(1, Math.round(rect.width)) || 390;
+      const h = Math.max(1, Math.round(rect.height)) || 820;
+      const newW = w * DPR, newH = h * DPR;
+      if (canvas.width === newW && canvas.height === newH) return;
+      canvas.width = newW; canvas.height = newH;
+      W = newW; H = newH;
+      canvas.style.width = w + 'px';
+      canvas.style.height = h + 'px';
+      seed();
+    }
+    // Observe the PARENT (phone-screen), not the canvas — avoids feedback loops.
+    if (window.ResizeObserver) {
+      let pending = false;
+      const ro = new ResizeObserver(() => {
+        if (pending) return;
+        pending = true;
+        requestAnimationFrame(() => { pending = false; resize(); });
+      });
+      if (canvas.parentElement) ro.observe(canvas.parentElement);
+    }
+
+    // Matrix grid of orbs — each orb has a home cell, drifts fluidly with
+    // noise, and can be displaced by pulses or edge-entry currents.
+    const GRID_SPACING = 28; // CSS px between home positions — dense matrix
+    function seed() {
+      particles = [];
+      const spacing = GRID_SPACING * DPR;
+      const cols = Math.ceil(W / spacing) + 2;
+      const rows = Math.ceil(H / spacing) + 2;
+      for (let i = -1; i < cols; i++) {
+        for (let j = -1; j < rows; j++) {
+          const hx = i * spacing + spacing / 2;
+          const hy = j * spacing + spacing / 2;
+          particles.push({
+            hx, hy,
+            x: hx + (Math.random() - 0.5) * spacing * 0.4,
+            y: hy + (Math.random() - 0.5) * spacing * 0.4,
+            vx: 0, vy: 0,
+            r: (Math.random() * 0.7 + 0.45) * DPR,
+            hue: (i + j) % 2 === 0 ? paletteHue.cyan : paletteHue.violet,
+            alpha: Math.random() * 0.25 + 0.25,
+            phase: Math.random() * Math.PI * 2,
+            phaseSpeed: 0.003 + Math.random() * 0.004,
+            // Each orb gets its own drift direction "from outside"
+            driftAngle: Math.random() * Math.PI * 2,
+            driftStrength: 0.3 + Math.random() * 0.5
+          });
+        }
+      }
+    }
+    resize();
+    window.LUMIX_resize = resize;
+    window.addEventListener('resize', resize);
+    // Also retry on boot in case layout settles late
+    setTimeout(resize, 100);
+    setTimeout(resize, 400);
+
+    // External API: trigger a pulse (shockwave)
+    window.LUMIX_pulse = (x, y) => {
+      pulses.push({ x: x * DPR, y: y * DPR, r: 20 * DPR, max: 400 * DPR, life: 0 });
+    };
+
+    window.LUMIX_setPalette = (c, v) => {
+      paletteHue.cyan = c;
+      paletteHue.violet = v;
+      particles.forEach(p => {
+        p.hue = Math.random() > 0.5 ? c : v;
+      });
+    };
+
+    let t = 0;
+    function tick() {
+      t += 0.006;
+      ctx.clearRect(0, 0, W, H);
+
+      // Global fluid current — slow changing direction, like water
+      const currentAngle = Math.sin(t * 0.2) * Math.PI + t * 0.15;
+      const currentMag = (0.25 + Math.sin(t * 0.1) * 0.1) * DPR;
+      const flowX = Math.cos(currentAngle) * currentMag;
+      const flowY = Math.sin(currentAngle) * currentMag;
+
+      // update pulses
+      pulses = pulses.filter(p => p.life < 1);
+      pulses.forEach(p => {
+        p.life += 0.012;
+        p.r = 20 * DPR + (p.max - 20 * DPR) * p.life;
+      });
+
+      for (const p of particles) {
+        p.phase += p.phaseSpeed;
+
+        // Per-orb fluid drift — direction slowly rotates (noise-like)
+        p.driftAngle += Math.sin(t * 0.3 + p.phase) * 0.006;
+        const driftX = Math.cos(p.driftAngle) * p.driftStrength * 0.25 * DPR;
+        const driftY = Math.sin(p.driftAngle) * p.driftStrength * 0.25 * DPR;
+
+        // Spring back toward grid home — keeps matrix structure
+        const hx = p.hx - p.x;
+        const hy = p.hy - p.y;
+        const springK = 0.0025;
+        p.vx += hx * springK;
+        p.vy += hy * springK;
+
+        // Add fluid forces
+        p.vx += (driftX + flowX) * 0.05;
+        p.vy += (driftY + flowY) * 0.05;
+
+        // Pulse radial dispersal — pushes orbs outward from pulse center
+        for (const pu of pulses) {
+          const dx = p.x - pu.x, dy = p.y - pu.y;
+          const d = Math.sqrt(dx*dx + dy*dy) || 1;
+          const ringDist = Math.abs(d - pu.r);
+          if (ringDist < 80 * DPR) {
+            const strength = (1 - pu.life) * (1 - ringDist / (80 * DPR)) * 4;
+            p.vx += (dx / d) * strength;
+            p.vy += (dy / d) * strength;
+          }
+        }
+
+        // Damping
+        p.vx *= 0.92;
+        p.vy *= 0.92;
+        p.x += p.vx;
+        p.y += p.vy;
+
+        // Render with glow
+        const breath = 0.75 + 0.25 * Math.sin(p.phase * 2);
+        const a = p.alpha * breath;
+        const glowR = p.r * 5;
+
+        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
+        grad.addColorStop(0, p.hue + Math.floor(a * 140).toString(16).padStart(2, '0'));
+        grad.addColorStop(0.5, p.hue + '22');
+        grad.addColorStop(1, p.hue + '00');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, glowR, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.globalAlpha = Math.min(1, a * 1.8);
+        ctx.fillStyle = p.hue;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      requestAnimationFrame(tick);
+    }
+    tick();
+  };
+</script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="app.jsx"></script>
+</body>
+</html>

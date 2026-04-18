@@ -1,0 +1,23 @@
+node_modules/
+.expo/
+dist/
+build/
+android/
+ios/
+
+# Model files — too large for git, side-load manually
+assets/models/
+*.task
+*.gguf
+*.bin
+
+# Env
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
+
+# EAS
+.easignore

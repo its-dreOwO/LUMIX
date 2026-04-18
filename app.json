@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "LUMIX",
+    "slug": "lumix",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "lumix",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "icon": "./assets/icons/icon.png",
+    "splash": {
+      "backgroundColor": "#000000"
+    },
+    "android": {
+      "package": "com.lumix.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icons/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "LUMIX uses your location to show local weather."
+        }
+      ],
+      "expo-sqlite",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
