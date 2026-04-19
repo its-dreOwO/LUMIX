@@ -9,13 +9,15 @@ interface InputDockProps {
   onChangeText: (t: string) => void;
   onSend: () => void;
   disabled?: boolean;
+  /** Extra pixels to push the dock up — used to sit above the keyboard. */
+  bottomInset?: number;
 }
 
-export function InputDock({ value, onChangeText, onSend, disabled = false }: InputDockProps) {
+export function InputDock({ value, onChangeText, onSend, disabled = false, bottomInset = 0 }: InputDockProps) {
   const canSend = value.trim().length > 0 && !disabled;
 
   return (
-    <View style={styles.dock}>
+    <View style={[styles.dock, { bottom: 60 + bottomInset }]}>
       <GlassCard style={styles.box}>
         <TextInput
           style={styles.input}
@@ -51,7 +53,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 12,
     right: 12,
-    bottom: 60,
     zIndex: 5,
   },
   box: {

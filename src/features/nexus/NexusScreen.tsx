@@ -8,11 +8,13 @@ import { InputDock } from './components/InputDock';
 import { QuickSuggest } from './components/QuickSuggest';
 import { useChatSession } from './hooks/useChatSession';
 import { useParticleRef } from '@/state/particleContext';
+import { useKeyboardHeight } from '@/utils/useKeyboardHeight';
 
 export function NexusScreen() {
   const particleRef = useParticleRef();
   const flatListRef = useRef<FlatList>(null);
   const { messages, orbActive, inputText, setInputText, sendMessage } = useChatSession();
+  const keyboardHeight = useKeyboardHeight();
 
   const handleSend = () => {
     sendMessage((x, y) => particleRef?.current?.pulse(x, y));
@@ -42,7 +44,7 @@ export function NexusScreen() {
           keyExtractor={(m) => m.id}
           renderItem={({ item }) => <MessageBubble message={item} />}
           contentContainerStyle={styles.transcript}
-          style={styles.transcriptList}
+          style={[styles.transcriptList, { bottom: 170 + keyboardHeight }]}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() =>
             flatListRef.current?.scrollToEnd({ animated: true })
@@ -61,6 +63,7 @@ export function NexusScreen() {
         onChangeText={setInputText}
         onSend={handleSend}
         disabled={orbActive}
+        bottomInset={keyboardHeight}
       />
     </View>
   );
@@ -84,7 +87,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: 170,
     maxHeight: 130,
   },
   transcript: {

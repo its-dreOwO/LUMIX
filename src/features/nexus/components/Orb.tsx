@@ -69,7 +69,13 @@ export function Orb({ active = false, size = ORB_SIZE }: OrbProps) {
   }));
 
   const half = size / 2;
-  const center = vec(half, half);
+  // Canvas is enlarged so the outer swirl (radius up to half*1.4 + blur) isn't
+  // clipped into a square. All drawing coords are offset by PAD.
+  const PAD = Math.ceil(size * 0.35);
+  const canvasSize = size + PAD * 2;
+  const cx = half + PAD;
+  const cy = half + PAD;
+  const center = vec(cx, cy);
 
   return (
     <View style={[styles.container, { width: size, height: size }]}>
@@ -81,16 +87,25 @@ export function Orb({ active = false, size = ORB_SIZE }: OrbProps) {
         left: -(size * 0.62),
       }]} />
 
-      {/* Animated orb */}
+      {/* Animated orb — Canvas is oversized & absolutely centered so the
+          outer swirl can render beyond the shell without being clipped. */}
       <Animated.View style={[styles.orb, { width: size, height: size }, animStyle]}>
-        <Canvas style={{ width: size, height: size }}>
+        <Canvas
+          style={{
+            width: canvasSize,
+            height: canvasSize,
+            position: 'absolute',
+            top: -PAD,
+            left: -PAD,
+          }}
+        >
           {/* Shell base — dark core + colour radials */}
-          <Circle cx={half} cy={half} r={half}>
+          <Circle cx={cx} cy={cy} r={half}>
             <RadialGradient
               c={center}
               r={half}
-              colors={['rgba(255,255,255,0.35)', 'rgba(138,43,226,0.55)', 'rgba(0,240,255,0.45)', '#0a0a12']}
-              positions={[0, 0.4, 0.65, 1]}
+              colors={['rgba(255,255,255,0.25)', 'rgba(138,43,226,0.35)', 'rgba(0,240,255,0.25)', 'transparent']}
+              positions={[0, 0.3, 0.7, 1]}
             />
           </Circle>
 
@@ -100,7 +115,7 @@ export function Orb({ active = false, size = ORB_SIZE }: OrbProps) {
             transform={[{ rotate: swirlAngle.value }]}
             opacity={0.7}
           >
-            <Circle cx={half} cy={half} r={half * 1.4}>
+            <Circle cx={cx} cy={cy} r={half * 1.4}>
               <SweepGradient
                 c={center}
                 colors={[
@@ -124,7 +139,7 @@ export function Orb({ active = false, size = ORB_SIZE }: OrbProps) {
             transform={[{ rotate: innerAngle.value }]}
             opacity={0.6}
           >
-            <Circle cx={half} cy={half} r={half * 0.7}>
+            <Circle cx={cx} cy={cy} r={half * 0.7}>
               <SweepGradient
                 c={center}
                 colors={[
@@ -141,7 +156,7 @@ export function Orb({ active = false, size = ORB_SIZE }: OrbProps) {
           </Group>
 
           {/* Core glow */}
-          <Circle cx={half} cy={half} r={half * 0.2}>
+          <Circle cx={cx} cy={cy} r={half * 0.2}>
             <RadialGradient
               c={center}
               r={half * 0.2}
@@ -149,17 +164,6 @@ export function Orb({ active = false, size = ORB_SIZE }: OrbProps) {
               positions={[0, 0.4, 1]}
             />
             <BlurMask blur={8} style="normal" />
-          </Circle>
-
-          {/* Inner glow ring */}
-          <Circle
-            cx={half}
-            cy={half}
-            r={half - 1}
-            color="transparent"
-            style="stroke"
-            strokeWidth={1}
-          >
           </Circle>
         </Canvas>
       </Animated.View>
@@ -239,7 +243,6 @@ const styles = StyleSheet.create({
   },
   orb: {
     borderRadius: 999,
-    overflow: 'hidden',
     shadowColor: colors.cyan,
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.25,
@@ -248,7 +251,7 @@ const styles = StyleSheet.create({
   pulseRing: {
     position: 'absolute',
     borderWidth: 1,
-    borderColor: `rgba(0,240,255,0.5)`,
+    borderColor: `rgba(0,240,255,0.3)`,
     backgroundColor: 'transparent',
   },
 });

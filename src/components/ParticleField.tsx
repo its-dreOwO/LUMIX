@@ -62,11 +62,12 @@ export interface ParticleFieldRef {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const GRID_SPACING = 28;   // px between particle home positions
+const GRID_SPACING = 22;   // px between particle home positions (decreased for more density)
 const MAX_PULSES = 8;
 const PULSE_MAX_RADIUS = 400;
 const CYAN = colors.cyan;     // '#00F0FF'
 const VIOLET = colors.violet; // '#8A2BE2'
+const ORB_RADIUS_OCCLUSION = 115; // Radius around center where dots shouldn't exist
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -103,8 +104,8 @@ function createParticles(W: number, H: number, DPR: number): ParticleState {
       y.push(hyVal + (Math.random() - 0.5) * spacing * 0.4);
       vx.push(0);
       vy.push(0);
-      r.push((Math.random() * 0.7 + 0.45) * DPR);
-      alpha.push(Math.random() * 0.25 + 0.25);
+      r.push((Math.random() * 0.9 + 0.7) * DPR); // 0.7 – 1.6 px — readable dots
+      alpha.push(Math.random() * 0.25 + 0.35);   // 0.35 – 0.60 — visible but not harsh
       hue.push((i + j) % 2 === 0 ? 0 : 1);
       phase.push(Math.random() * Math.PI * 2);
       phaseSpeed.push(0.003 + Math.random() * 0.004);
@@ -236,37 +237,53 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
 
   // ─── Draw ────────────────────────────────────────────────────────────────
 
-  const recorder = Skia.PictureRecorder();
-  const dotPaint = Skia.Paint();
-  const glowPaint = Skia.Paint();
+  const recorder = React.useMemo(() => Skia.PictureRecorder(), []);
+  const dotPaint = React.useMemo(() => Skia.Paint(), []);
+  const glowPaint = React.useMemo(() => Skia.Paint(), []);
 
   const picture = useDerivedValue(() => {
     'worklet';
     const ps = particles.value;
-    if (!ps) return recorder.finishRecordingAsPicture?.() ?? null;
-
+    
+    // Always begin recording so we have a valid canvas and can safely finish
     const canvas = recorder.beginRecording(Skia.XYWHRect(0, 0, W, H));
+    
+    if (ps) {
+      const centerX = W / 2;
+      const centerY = H / 2;
+      const orbRadiusSq = ORB_RADIUS_OCCLUSION * ORB_RADIUS_OCCLUSION;
 
-    for (let i = 0; i < ps.count; i++) {
-      const px = ps.x[i];
-      const py = ps.y[i];
-      const pr = ps.r[i];
-      const breath = 0.75 + 0.25 * Math.sin(ps.phase[i] * 2);
-      const a = ps.alpha[i] * breath;
-      const glowR = pr * 5;
+      for (let i = 0; i < ps.count; i++) {
+        const px = ps.x[i];
+        const py = ps.y[i];
 
-      const hexColor = ps.hue[i] === 0 ? CYAN : VIOLET;
+        // Occlusion check: skip drawing if dot is behind the central Orb
+        const dx = px - centerX;
+        const dy = py - centerY;
+        if (dx * dx + dy * dy < orbRadiusSq) {
+          continue;
+        }
 
-      // Glow halo
-      const alphaHex = Math.floor(Math.min(a * 140, 255)).toString(16).padStart(2, '0');
-      glowPaint.setColor(Skia.Color(hexColor + alphaHex));
-      glowPaint.setAlphaf(a * 0.55);
-      canvas.drawCircle(px, py, glowR, glowPaint);
+        const pr = ps.r[i];
 
-      // Core dot
-      dotPaint.setColor(Skia.Color(hexColor));
-      dotPaint.setAlphaf(Math.min(a * 1.8, 1));
-      canvas.drawCircle(px, py, pr, dotPaint);
+
+        const breath = 0.75 + 0.25 * Math.sin(ps.phase[i] * 2);
+        const a = ps.alpha[i] * breath;
+        const glowR = pr * 5;
+
+        const hexColor = ps.hue[i] === 0 ? CYAN : VIOLET;
+
+        // Glow halo
+        const alphaHex = Math.floor(Math.min(a * 140, 255)).toString(16).padStart(2, '0');
+        glowPaint.setColor(Skia.Color(hexColor + alphaHex));
+        glowPaint.setAlphaf(a * 0.55);
+        canvas.drawCircle(px, py, glowR, glowPaint);
+
+        // Core dot
+        dotPaint.setColor(Skia.Color(hexColor));
+        dotPaint.setAlphaf(Math.min(a * 1.8, 1));
+        canvas.drawCircle(px, py, pr, dotPaint);
+      }
     }
 
     return recorder.finishRecordingAsPicture();
