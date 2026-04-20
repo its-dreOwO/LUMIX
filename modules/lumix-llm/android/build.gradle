@@ -1,20 +1,13 @@
-apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
-
-buildscript {
-  def expoModulesCorePlugin = new File(project(":expo-modules-core").projectDir.absolutePath, "ExpoModulesCorePlugin.gradle")
-  if (expoModulesCorePlugin.exists()) {
-    apply from: expoModulesCorePlugin
-    applyKotlinExpoModulesCorePlugin()
-  }
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
 }
 
 android {
-  compileSdkVersion safeExtGet("compileSdkVersion", 35)
+  namespace 'expo.modules.lumixllm'
 
   defaultConfig {
-    minSdkVersion safeExtGet("minSdkVersion", 26)
-    targetSdkVersion safeExtGet("targetSdkVersion", 35)
+    minSdkVersion 26
   }
 
   lintOptions {
@@ -22,13 +15,6 @@ android {
   }
 }
 
-repositories {
-  google()
-  mavenCentral()
-}
-
 dependencies {
-  implementation project(':expo-modules-core')
-  implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:${kotlinVersion()}"
-  implementation "com.google.mediapipe:tasks-genai:0.10.14"
+  implementation 'com.google.mediapipe:tasks-genai:0.10.14'
 }
