@@ -26,6 +26,7 @@
       ]
     },
     "plugins": [
+      "./plugins/withGradleProperties",
       "expo-router",
       [
         "expo-location",
