@@ -129,6 +129,7 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
   });
   const t = useSharedValue(0);
   const activeMode = useSharedValue(0); // 0 = idle, 1 = active (faster waves)
+  const prevActive = useSharedValue(0); 
   const orbYOffset = useSharedValue(0); // keyboard-driven orb translate (negative = up)
 
   const waves = useSharedValue<{
@@ -194,7 +195,15 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
     setActive: (a: boolean) => {
       runOnUI(() => {
         'worklet';
-        activeMode.value = a ? 1 : 0;
+        const next = a ? 1 : 0;
+        if (next === 1 && activeMode.value === 0) {
+          // Reset wave offsets so they "burst" from the orb
+          const wv = waves.value;
+          wv.offset = [0, 0, 0];
+          // Clear any current pulses so we only have the "new" generating waves
+          pulses.value = { x: [], y: [], r: [], life: [], count: 0 };
+        }
+        activeMode.value = next;
       })();
     },
     setOrbOffset: (dy: number) => {
