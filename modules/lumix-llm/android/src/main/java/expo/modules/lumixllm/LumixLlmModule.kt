@@ -14,29 +14,15 @@ class LumixLlmModule : Module() {
     Events("LumixLLMToken", "LumixLLMDone", "LumixLLMError")
 
     // Load the model from an absolute file path.
-    // modelPath: absolute path to the .task file on device storage
-    // maxTokens: max tokens to generate per response
-    // temperature: sampling temperature (0.0–1.0)
+    // The result listener is wired at init time (MediaPipe 0.10.14+ API).
     AsyncFunction("load") { modelPath: String, maxTokens: Int, temperature: Double ->
       val context = requireNotNull(appContext.reactContext) { "React context unavailable" }
+      llmInference?.close()
       val options = LlmInference.LlmInferenceOptions.builder()
         .setModelPath(modelPath)
         .setMaxTokens(maxTokens)
         .setTemperature(temperature.toFloat())
-        .build()
-      llmInference?.close()
-      llmInference = LlmInference.createFromOptions(context, options)
-    }
-
-    // Fire-and-forget: starts async generation and emits token events.
-    // Results arrive via LumixLLMToken / LumixLLMDone / LumixLLMError events.
-    Function("generate") { prompt: String ->
-      val inference = llmInference ?: run {
-        sendEvent("LumixLLMError", bundleOf("message" to "Model not loaded — call load() first"))
-        return@Function
-      }
-      try {
-        inference.generateResponseAsync(prompt) { partialResult, done ->
+        .setResultListener { partialResult, done ->
           if (partialResult != null) {
             sendEvent("LumixLLMToken", bundleOf("text" to partialResult))
           }
@@ -44,14 +30,28 @@ class LumixLlmModule : Module() {
             sendEvent("LumixLLMDone", bundleOf())
           }
         }
+        .setErrorListener { e ->
+          sendEvent("LumixLLMError", bundleOf("message" to (e?.message ?: "Unknown generation error")))
+        }
+        .build()
+      llmInference = LlmInference.createFromOptions(context, options)
+    }
+
+    // Fire-and-forget: starts async generation; results arrive via LumixLLMToken/Done/Error events.
+    Function("generate") { prompt: String ->
+      val inference = llmInference ?: run {
+        sendEvent("LumixLLMError", bundleOf("message" to "Model not loaded — call load() first"))
+        return@Function
+      }
+      try {
+        inference.generateResponseAsync(prompt)
       } catch (e: Exception) {
         sendEvent("LumixLLMError", bundleOf("message" to (e.message ?: "Unknown error during generation")))
       }
     }
 
-    // No cancel API in LlmInference — generation runs to completion naturally.
     Function("stop") {
-      // no-op for now; close/reload would cancel but is expensive
+      // LlmInference has no mid-generation cancel API; no-op for now.
     }
   }
 }
