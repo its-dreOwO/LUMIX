@@ -20,7 +20,11 @@ function getGreeting() {
   return 'Good evening';
 }
 
-export function Greeting() {
+interface GreetingProps {
+  hidden?: boolean;
+}
+
+export function Greeting({ hidden = false }: GreetingProps) {
   const [time, setTime] = useState(getTimeString());
 
   useEffect(() => {
@@ -28,14 +32,16 @@ export function Greeting() {
     return () => clearInterval(id);
   }, []);
 
+  if (hidden) return null;
+
   return (
     <View style={styles.wrapper} pointerEvents="none">
       <Text style={styles.time}>{time}</Text>
       <Text style={styles.heading}>
         {getGreeting()},{' '}
-        <Text style={styles.em}>LUMIX</Text>
+        <Text style={styles.em}>Dre</Text>
       </Text>
-      <Text style={styles.sub}>How can I help you today?</Text>
+      <Text style={styles.sub}>LUMIX is here to help</Text>
     </View>
   );
 }

@@ -1,0 +1,7 @@
+{
+  "name": "lumix-llm",
+  "version": "1.0.0",
+  "description": "LUMIX on-device LLM native module (MediaPipe LlmInference bridge)",
+  "main": "index.ts",
+  "private": true
+}

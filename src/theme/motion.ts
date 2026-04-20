@@ -3,7 +3,7 @@ export const durations = {
   fast: 200,
   normal: 400,
   slow: 600,
-  breathe: 5000,
+  breathe: 3500,
   breatheActive: 1400,
   orbSwirl: 12000,
   orbSwirlActive: 3000,

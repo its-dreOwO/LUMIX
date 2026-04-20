@@ -1,21 +1,24 @@
-// JS bridge for the LumixLLM native module.
-// The native side lives in modules/lumix-llm/android/LumixLlmModule.kt
-// and emits events: LumixLLMToken { text }, LumixLLMDone, LumixLLMError { message }
+import { Platform } from 'react-native';
+import { requireNativeModule, EventEmitter } from 'expo-modules-core';
 
-import { NativeModules, NativeEventEmitter, Platform } from 'react-native';
+let _native: any = null;
+let _emitter: EventEmitter | null = null;
 
-const { LumixLLM } = NativeModules;
-
-export const lumixLLMAvailable = Platform.OS === 'android' && !!LumixLLM;
-
-export const lumixLLMEmitter = lumixLLMAvailable
-  ? new NativeEventEmitter(LumixLLM)
-  : null;
-
-export interface LumixLLMNative {
-  load(modelPath: string): Promise<void>;
-  generate(prompt: string, maxTokens: number, temperature: number): void;
-  stop(): void;
+if (Platform.OS === 'android') {
+  try {
+    _native = requireNativeModule('LumixLLM');
+    _emitter = new EventEmitter(_native);
+  } catch {
+    // module not linked in this build
+  }
 }
 
-export const lumixLLMNative: LumixLLMNative | null = lumixLLMAvailable ? LumixLLM : null;
+export const lumixLLMAvailable = !!_native;
+export const lumixLLMNative = _native;
+export const lumixLLMEmitter = _emitter;
+
+export interface LumixLLMNative {
+  load(modelPath: string, maxTokens: number, temperature: number): Promise<void>;
+  generate(prompt: string): void;
+  stop(): void;
+}

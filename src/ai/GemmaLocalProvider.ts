@@ -1,32 +1,21 @@
-import { NativeEventEmitter, NativeModules, Platform } from 'react-native';
 import type { LLMProvider, GenerateOpts } from './LLMProvider';
-
-// TODO (Phase 3): implement modules/lumix-llm native module
-// This file bridges it to the LLMProvider interface.
-
-const { LumixLLM } = NativeModules;
+import { lumixLLMNative, lumixLLMEmitter, lumixLLMAvailable } from '../../modules/lumix-llm';
 
 export class GemmaLocalProvider implements LLMProvider {
   private ready = false;
-  private emitter: NativeEventEmitter | null = null;
-
-  constructor() {
-    if (Platform.OS !== 'android' || !LumixLLM) return;
-    this.emitter = new NativeEventEmitter(LumixLLM);
-  }
 
   isReady() {
     return this.ready;
   }
 
-  async load(modelPath: string): Promise<void> {
-    if (Platform.OS !== 'android' || !LumixLLM) return;
-    await LumixLLM.load(modelPath);
+  async load(modelPath: string, maxTokens = 1024, temperature = 0.8): Promise<void> {
+    if (!lumixLLMAvailable) return;
+    await lumixLLMNative.load(modelPath, maxTokens, temperature);
     this.ready = true;
   }
 
   async *generate(prompt: string, opts?: GenerateOpts): AsyncIterable<string> {
-    if (!this.ready || !LumixLLM || !this.emitter) {
+    if (!this.ready || !lumixLLMAvailable || !lumixLLMEmitter) {
       yield '[Model not loaded]';
       return;
     }
@@ -35,18 +24,18 @@ export class GemmaLocalProvider implements LLMProvider {
     let done = false;
     let error: Error | null = null;
 
-    const tokenSub = this.emitter.addListener('LumixLLMToken', (e: { text: string }) => {
+    const tokenSub = lumixLLMEmitter.addListener('LumixLLMToken', (e: { text: string }) => {
       tokens.push(e.text);
     });
-    const doneSub = this.emitter.addListener('LumixLLMDone', () => {
+    const doneSub = lumixLLMEmitter.addListener('LumixLLMDone', () => {
       done = true;
     });
-    const errSub = this.emitter.addListener('LumixLLMError', (e: { message: string }) => {
+    const errSub = lumixLLMEmitter.addListener('LumixLLMError', (e: { message: string }) => {
       error = new Error(e.message);
       done = true;
     });
 
-    LumixLLM.generate(prompt, opts?.maxTokens ?? 512, opts?.temperature ?? 0.7);
+    lumixLLMNative.generate(prompt);
 
     try {
       while (!done || tokens.length > 0) {

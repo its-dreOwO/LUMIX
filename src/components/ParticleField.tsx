@@ -12,7 +12,6 @@ import React, {
   forwardRef,
   useImperativeHandle,
   useEffect,
-  useCallback,
 } from 'react';
 import { StyleSheet, useWindowDimensions } from 'react-native';
 import { Canvas, Picture, Skia } from '@shopify/react-native-skia';
@@ -22,7 +21,6 @@ import {
   useFrameCallback,
   runOnUI,
 } from 'react-native-reanimated';
-import { colors } from '@/theme/colors';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -58,20 +56,18 @@ interface PulseState {
 
 export interface ParticleFieldRef {
   pulse: (x: number, y: number) => void;
+  setActive: (active: boolean) => void;
+  setOrbOffset: (dy: number) => void;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const GRID_SPACING = 22;   // px between particle home positions (decreased for more density)
+const GRID_SPACING = 28;
 const MAX_PULSES = 8;
 const PULSE_MAX_RADIUS = 400;
-const CYAN = colors.cyan;     // '#00F0FF'
-const VIOLET = colors.violet; // '#8A2BE2'
-const ORB_RADIUS_OCCLUSION = 115; // Radius around center where dots shouldn't exist
+const DOT_COLOR = '#E8F4FF'; // near-white with a faint cool tint
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function rand() { 'worklet'; return Math.random(); }
 
 function createParticles(W: number, H: number, DPR: number): ParticleState {
   'worklet';
@@ -100,12 +96,12 @@ function createParticles(W: number, H: number, DPR: number): ParticleState {
       const hyVal = j * spacing + spacing / 2;
       hx.push(hxVal);
       hy.push(hyVal);
-      x.push(hxVal + (Math.random() - 0.5) * spacing * 0.4);
-      y.push(hyVal + (Math.random() - 0.5) * spacing * 0.4);
+      x.push(hxVal + (Math.random() - 0.5) * spacing * 0.15);
+      y.push(hyVal + (Math.random() - 0.5) * spacing * 0.15);
       vx.push(0);
       vy.push(0);
-      r.push((Math.random() * 0.9 + 0.7) * DPR); // 0.7 – 1.6 px — readable dots
-      alpha.push(Math.random() * 0.25 + 0.35);   // 0.35 – 0.60 — visible but not harsh
+      r.push((Math.random() * 0.4 + 0.8) * DPR); // 0.8–1.2 px, uniform
+      alpha.push(Math.random() * 0.3 + 0.55); // 0.55–0.85, brighter
       hue.push((i + j) % 2 === 0 ? 0 : 1);
       phase.push(Math.random() * Math.PI * 2);
       phaseSpeed.push(0.003 + Math.random() * 0.004);
@@ -132,6 +128,26 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
     x: [], y: [], r: [], life: [], count: 0,
   });
   const t = useSharedValue(0);
+  const activeMode = useSharedValue(0); // 0 = idle, 1 = active (faster waves)
+  const orbYOffset = useSharedValue(0); // keyboard-driven orb translate (negative = up)
+
+  const waves = useSharedValue<{
+    // Linear mode — directional
+    dirX: number[];
+    dirY: number[];
+    offset: number[];  // distance traveled along direction from screen center
+    speed: number[];
+    // Radial mode
+    radius: number[];
+    radialSpeed: number[];
+  }>({
+    dirX: [],
+    dirY: [],
+    offset: [],
+    speed: [],
+    radius: [],
+    radialSpeed: [],
+  });
 
   // Init particles when dimensions are known
   useEffect(() => {
@@ -139,6 +155,24 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
       runOnUI(() => {
         'worklet';
         particles.value = createParticles(W, H, DPR);
+        const baseAngles = [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6]; // 12, 4, 8 o'clock
+        const maxOffset = Math.sqrt(W * W + H * H);
+        waves.value = {
+          dirX: baseAngles.map((a) => Math.cos(a + (Math.random() - 0.5) * 0.7)),
+          dirY: baseAngles.map((a) => Math.sin(a + (Math.random() - 0.5) * 0.7)),
+          offset: [
+            -maxOffset * 0.5 + Math.random() * maxOffset,
+            -maxOffset * 0.5 + Math.random() * maxOffset,
+            -maxOffset * 0.5 + Math.random() * maxOffset,
+          ],
+          speed: [
+            1.5 + Math.random() * 0.7,
+            1.5 + Math.random() * 0.7,
+            1.5 + Math.random() * 0.7,
+          ],
+          radius: [20, 120, 220],
+          radialSpeed: [3.5, 4.0, 3.2],
+        };
       })();
     }
   }, [W, H]);
@@ -157,6 +191,18 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
         pulses.value = { ...p, count: p.count + 1 };
       })();
     },
+    setActive: (a: boolean) => {
+      runOnUI(() => {
+        'worklet';
+        activeMode.value = a ? 1 : 0;
+      })();
+    },
+    setOrbOffset: (dy: number) => {
+      runOnUI(() => {
+        'worklet';
+        orbYOffset.value = dy;
+      })();
+    },
   }));
 
   // Physics loop — runs entirely on UI thread at display frame rate
@@ -173,6 +219,25 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
     const currentMag = (0.25 + Math.sin(tv * 0.1) * 0.1) * DPR;
     const flowX = Math.cos(currentAngle) * currentMag;
     const flowY = Math.sin(currentAngle) * currentMag;
+
+    // Update waves
+    const wv = waves.value;
+    const isActive = activeMode.value === 1;
+    const speedMul = isActive ? 1.8 : 1.0;
+
+    // Always directional waves — active mode just runs them faster
+    const maxOffset = Math.sqrt(W * W + H * H);
+    for (let wi = 0; wi < 3; wi++) {
+      wv.offset[wi] += wv.speed[wi] * speedMul;
+      if (wv.offset[wi] > maxOffset * 0.6) {
+        wv.offset[wi] = -maxOffset * 0.6;
+        const baseAngle = [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6][wi];
+        const jittered = baseAngle + (Math.random() - 0.5) * 0.7;
+        wv.dirX[wi] = Math.cos(jittered);
+        wv.dirY[wi] = Math.sin(jittered);
+        wv.speed[wi] = 1.5 + Math.random() * 0.7;
+      }
+    }
 
     // Update pulses
     const pu = pulses.value;
@@ -230,9 +295,6 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
       ps.x[i] += ps.vx[i];
       ps.y[i] += ps.vy[i];
     }
-
-    // Trigger re-render by writing a new reference
-    particles.value = { ...ps };
   });
 
   // ─── Draw ────────────────────────────────────────────────────────────────
@@ -243,45 +305,50 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
 
   const picture = useDerivedValue(() => {
     'worklet';
+    // Subscribe to frame ticks so the picture re-records every frame
+    const _tick = t.value;
     const ps = particles.value;
     
     // Always begin recording so we have a valid canvas and can safely finish
     const canvas = recorder.beginRecording(Skia.XYWHRect(0, 0, W, H));
     
     if (ps) {
-      const centerX = W / 2;
-      const centerY = H / 2;
-      const orbRadiusSq = ORB_RADIUS_OCCLUSION * ORB_RADIUS_OCCLUSION;
+      const WAVE_WIDTH = 88;
+      const wv2 = waves.value;
+      // Orb center tracks keyboard — waves radiate from the orb's actual position
+      const orbCx = W / 2;
+      const orbCy = H / 2 + orbYOffset.value;
 
       for (let i = 0; i < ps.count; i++) {
         const px = ps.x[i];
         const py = ps.y[i];
-
-        // Occlusion check: skip drawing if dot is behind the central Orb
-        const dx = px - centerX;
-        const dy = py - centerY;
-        if (dx * dx + dy * dy < orbRadiusSq) {
-          continue;
-        }
-
         const pr = ps.r[i];
 
+        // Directional waves referenced to orb center
+        let brightness = 0;
+        for (let wi = 0; wi < 3; wi++) {
+          const rx = px - orbCx;
+          const ry = py - orbCy;
+          const signedDist = rx * wv2.dirX[wi] + ry * wv2.dirY[wi] - wv2.offset[wi];
+          const d = Math.abs(signedDist);
+          if (d < WAVE_WIDTH) {
+            const f = 0.5 + 0.5 * Math.cos((d / WAVE_WIDTH) * Math.PI);
+            if (f > brightness) brightness = f;
+          }
+        }
+        const baseAlpha = 0.08; // dim when no wave nearby
+        const a = baseAlpha + (ps.alpha[i] - baseAlpha) * brightness;
 
-        const breath = 0.75 + 0.25 * Math.sin(ps.phase[i] * 2);
-        const a = ps.alpha[i] * breath;
-        const glowR = pr * 5;
+        // Glow halo — only draw when particle is lit by a wave
+        if (brightness > 0.05) {
+          glowPaint.setColor(Skia.Color(DOT_COLOR));
+          glowPaint.setAlphaf(brightness * 0.5);
+          canvas.drawCircle(px, py, pr * 2.2, glowPaint);
+        }
 
-        const hexColor = ps.hue[i] === 0 ? CYAN : VIOLET;
-
-        // Glow halo
-        const alphaHex = Math.floor(Math.min(a * 140, 255)).toString(16).padStart(2, '0');
-        glowPaint.setColor(Skia.Color(hexColor + alphaHex));
-        glowPaint.setAlphaf(a * 0.55);
-        canvas.drawCircle(px, py, glowR, glowPaint);
-
-        // Core dot
-        dotPaint.setColor(Skia.Color(hexColor));
-        dotPaint.setAlphaf(Math.min(a * 1.8, 1));
+        // Core dot — always visible but dim by default
+        dotPaint.setColor(Skia.Color(DOT_COLOR));
+        dotPaint.setAlphaf(Math.min(a * 1.5, 1));
         canvas.drawCircle(px, py, pr, dotPaint);
       }
     }

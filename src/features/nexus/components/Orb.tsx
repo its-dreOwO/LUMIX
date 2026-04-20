@@ -16,6 +16,7 @@ import { View, StyleSheet } from 'react-native';
 import { Canvas, Circle, Group, SweepGradient, RadialGradient, vec, Skia, Paint, BlurMask } from '@shopify/react-native-skia';
 import Animated, {
   useSharedValue,
+  useDerivedValue,
   useAnimatedStyle,
   withRepeat,
   withSequence,
@@ -32,14 +33,14 @@ interface OrbProps {
 
 const ORB_SIZE = 170;
 
-export function Orb({ active = false, size = ORB_SIZE }: OrbProps) {
+export const Orb = React.memo(function Orb({ active = false, size = ORB_SIZE }: OrbProps) {
   const scale = useSharedValue(1);
   const swirlAngle = useSharedValue(0);
   const innerAngle = useSharedValue(0);
 
   // ── Breathe ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    const targetScale = active ? 1.05 : 1.02;
+    const targetScale = active ? 1.08 : 1.05;
     const dur = active ? durations.breatheActive : durations.breathe;
     scale.value = withRepeat(
       withSequence(
@@ -67,6 +68,9 @@ export function Orb({ active = false, size = ORB_SIZE }: OrbProps) {
   const animStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
   }));
+
+  const swirlTransform = useDerivedValue(() => [{ rotate: swirlAngle.value }]);
+  const innerTransform = useDerivedValue(() => [{ rotate: innerAngle.value }]);
 
   const half = size / 2;
   // Canvas is enlarged so the outer swirl (radius up to half*1.4 + blur) isn't
@@ -99,23 +103,31 @@ export function Orb({ active = false, size = ORB_SIZE }: OrbProps) {
             left: -PAD,
           }}
         >
+          {/* Solid dark base — occludes particles behind the orb */}
+          <Circle cx={cx} cy={cy} r={half} color="rgba(8,4,20,0.92)" />
+
           {/* Shell base — dark core + colour radials */}
           <Circle cx={cx} cy={cy} r={half}>
             <RadialGradient
               c={center}
               r={half}
-              colors={['rgba(255,255,255,0.25)', 'rgba(138,43,226,0.35)', 'rgba(0,240,255,0.25)', 'transparent']}
-              positions={[0, 0.3, 0.7, 1]}
+              colors={[
+                'rgba(0,240,255,0.35)',
+                'rgba(138,43,226,0.28)',
+                'rgba(0,240,255,0.12)',
+                'transparent',
+              ]}
+              positions={[0, 0.45, 0.8, 1]}
             />
           </Circle>
 
           {/* Outer swirl layer */}
           <Group
             origin={center}
-            transform={[{ rotate: swirlAngle.value }]}
-            opacity={0.7}
+            transform={swirlTransform}
+            opacity={0.85}
           >
-            <Circle cx={cx} cy={cy} r={half * 1.4}>
+            <Circle cx={cx} cy={cy} r={half * 1.02}>
               <SweepGradient
                 c={center}
                 colors={[
@@ -129,14 +141,14 @@ export function Orb({ active = false, size = ORB_SIZE }: OrbProps) {
                 ]}
                 positions={[0, 0.17, 0.33, 0.56, 0.72, 0.89, 1]}
               />
-              <BlurMask blur={10} style="normal" />
+              <BlurMask blur={4} style="normal" />
             </Circle>
           </Group>
 
           {/* Inner swirl layer */}
           <Group
             origin={center}
-            transform={[{ rotate: innerAngle.value }]}
+            transform={innerTransform}
             opacity={0.6}
           >
             <Circle cx={cx} cy={cy} r={half * 0.7}>
@@ -151,19 +163,19 @@ export function Orb({ active = false, size = ORB_SIZE }: OrbProps) {
                 ]}
                 positions={[0, 0.25, 0.5, 0.75, 1]}
               />
-              <BlurMask blur={6} style="normal" />
+              <BlurMask blur={3} style="normal" />
             </Circle>
           </Group>
 
           {/* Core glow */}
-          <Circle cx={cx} cy={cy} r={half * 0.2}>
+          <Circle cx={cx} cy={cy} r={half * 0.28}>
             <RadialGradient
               c={center}
-              r={half * 0.2}
-              colors={['rgba(255,255,255,0.6)', 'rgba(0,240,255,0.3)', 'transparent']}
+              r={half * 0.28}
+              colors={['rgba(255,255,255,0.95)', 'rgba(0,240,255,0.55)', 'transparent']}
               positions={[0, 0.4, 1]}
             />
-            <BlurMask blur={8} style="normal" />
+            <BlurMask blur={5} style="normal" />
           </Circle>
         </Canvas>
       </Animated.View>
@@ -173,7 +185,7 @@ export function Orb({ active = false, size = ORB_SIZE }: OrbProps) {
       {active && <PulseRing size={size} delay={500} />}
     </View>
   );
-}
+});
 
 // ─── PulseRing ────────────────────────────────────────────────────────────────
 

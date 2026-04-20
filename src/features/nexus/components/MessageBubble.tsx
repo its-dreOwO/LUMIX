@@ -33,16 +33,16 @@ const styles = StyleSheet.create({
   },
   userBubble: {
     alignSelf: 'flex-end',
-    backgroundColor: 'rgba(0,240,255,0.08)',
+    backgroundColor: 'rgba(0,240,255,0.14)',
     borderWidth: 1,
-    borderColor: 'rgba(0,240,255,0.25)',
+    borderColor: 'rgba(0,240,255,0.38)',
     borderBottomRightRadius: 6,
   },
   aiBubble: {
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(255,255,255,0.03)',
+    backgroundColor: 'rgba(255,255,255,0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.20)',
     borderBottomLeftRadius: 6,
   },
   label: {
