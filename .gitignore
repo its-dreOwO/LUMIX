@@ -2,8 +2,10 @@ node_modules/
 .expo/
 dist/
 build/
-android/
-ios/
+/android/
+/ios/
+# Allow native module android source
+!modules/**/android/
 
 # Model files — too large for git, side-load manually
 assets/models/
