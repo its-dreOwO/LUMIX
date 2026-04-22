@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { View, FlatList, StyleSheet, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -12,6 +12,7 @@ import { Greeting } from './components/Greeting';
 import { MessageBubble } from './components/MessageBubble';
 import { InputDock } from './components/InputDock';
 import { QuickSuggest } from './components/QuickSuggest';
+import { SettingsSheet } from './components/SettingsSheet';
 import { useChatSession } from './hooks/useChatSession';
 import { useParticleRef } from '@/state/particleContext';
 import { useKeyboardHeight } from '@/utils/useKeyboardHeight';
@@ -24,6 +25,7 @@ const ANIM = { duration: 380, easing: Easing.out(Easing.cubic) };
 const SCREEN_H = Dimensions.get('screen').height;
 
 export function NexusScreen() {
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const screenH = SCREEN_H;
   const particleRef = useParticleRef();
   const flatListRef = useRef<FlatList>(null);
@@ -41,13 +43,20 @@ export function NexusScreen() {
   }, [orbActive, particleRef]);
 
   useEffect(() => {
-    // Chat mode: animate orb to top-area; otherwise keep centered minus keyboard lift
-    const chatShift = hasMessages ? -(screenH / 2 - 96 - ORB_WRAP / 2) : 0;
-    const kbShift = -keyboardHeight * 0.55;
+    // Compact mode: there are any messages.
+    // In compact mode, the orb minimizes and floats to the top.
+    const inChatMode = hasMessages;
+    
+    // Default chat shift pushes it up near the header
+    const chatShift = inChatMode ? -(screenH / 2 - 96 - ORB_WRAP / 2) : 0;
+    
+    // Idle (no messages) + keyboard up: lift orb just above keyboard so it isn't covered
+    const kbShift = (!hasMessages && keyboardHeight > 0) ? -keyboardHeight * 0.55 : 0;
+    
     const totalY = chatShift + kbShift;
 
     orbTranslateY.value = withTiming(totalY, ANIM);
-    orbScale.value = withTiming(hasMessages ? 0.62 : 1.0, ANIM);
+    orbScale.value = withTiming(inChatMode ? 0.62 : 1.0, ANIM);
     particleRef?.current?.setOrbOffset(totalY);
   }, [hasMessages, keyboardHeight]);
 
@@ -59,7 +68,7 @@ export function NexusScreen() {
   }));
 
   const handleSend = () => {
-    sendMessage((x, y) => particleRef?.current?.pulse(x, y));
+    sendMessage(); // removed pulse callback to satisfy removal of explosion on send
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 50);
   };
 
@@ -67,9 +76,14 @@ export function NexusScreen() {
     setInputText(text);
   };
 
-  // Transcript top: just below the small orb in chat mode
-  const orbBottom = screenH / 2 - ORB_WRAP / 2 + (hasMessages ? -(screenH / 2 - 96 - ORB_WRAP / 2) : 0) + ORB_WRAP * (hasMessages ? 0.62 : 1.0);
-  const transcriptTop = Math.round(orbBottom + 12);
+  // Transcript top follows the orb's actual rendered bottom.
+  // inChatMode (messages exist): orb is compact at top → transcript starts just below it.
+  // Otherwise: orb is centered.
+  const inChatMode = hasMessages;
+  const orbVisualBottom = inChatMode
+    ? 96 + (ORB_WRAP * 0.62) / 2          // compact: top=96, half of scaled orb
+    : screenH / 2 + ORB_WRAP / 2;         // centered: screenH/2 + half wrap
+  const transcriptTop = Math.round(orbVisualBottom + 16);
 
   return (
     <View style={styles.screen}>
@@ -91,7 +105,7 @@ export function NexusScreen() {
           contentContainerStyle={styles.transcript}
           style={[styles.transcriptList, {
             top: transcriptTop,
-            bottom: 80 + keyboardHeight,
+            bottom: 76 + keyboardHeight,
           }]}
           showsVerticalScrollIndicator={false}
           onContentSizeChange={() =>
@@ -112,8 +126,15 @@ export function NexusScreen() {
         onSend={handleSend}
         disabled={orbActive}
         bottomInset={keyboardHeight}
-        showNewSession={hasMessages}
+        showNewSession={true}
         onNewSession={clearMessages}
+        onOpenSettings={() => setIsSettingsVisible(true)}
+      />
+
+      {/* Settings Bottom Sheet */}
+      <SettingsSheet 
+        isVisible={isSettingsVisible} 
+        onClose={() => setIsSettingsVisible(false)} 
       />
     </View>
   );
@@ -138,6 +159,8 @@ const styles = StyleSheet.create({
     right: 16,
   },
   transcript: {
+    flexGrow: 1,
+    justifyContent: 'flex-end',
     gap: 8,
     paddingVertical: 8,
     paddingHorizontal: 4,

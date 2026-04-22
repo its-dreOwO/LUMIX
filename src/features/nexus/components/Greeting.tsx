@@ -49,7 +49,7 @@ export function Greeting({ hidden = false }: GreetingProps) {
 const styles = StyleSheet.create({
   wrapper: {
     position: 'absolute',
-    top: 110,
+    top: 148,
     left: 0,
     right: 0,
     alignItems: 'center',

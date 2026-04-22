@@ -12,11 +12,13 @@ interface NexusState {
   orbActive: boolean;
   inputText: string;
   sessionId: string;
+  lumenMode: boolean;
 
   addMessage: (msg: ChatMessage) => void;
   updateLastAiMessage: (text: string, done: boolean) => void;
   setOrbActive: (active: boolean) => void;
   setInputText: (text: string) => void;
+  setLumenMode: (enabled: boolean) => void;
   clearMessages: () => void;
 }
 
@@ -25,6 +27,7 @@ export const useNexusStore = create<NexusState>((set) => ({
   orbActive: false,
   inputText: '',
   sessionId: Date.now().toString(),
+  lumenMode: false,
 
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
 
@@ -39,6 +42,7 @@ export const useNexusStore = create<NexusState>((set) => ({
     }),
 
   setOrbActive: (active) => set({ orbActive: active }),
+  setLumenMode: (enabled) => set({ lumenMode: enabled }),
   setInputText: (text) => set({ inputText: text }),
   clearMessages: () => set({ messages: [], sessionId: Date.now().toString() }),
 }));

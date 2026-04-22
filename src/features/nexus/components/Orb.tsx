@@ -40,12 +40,12 @@ export const Orb = React.memo(function Orb({ active = false, size = ORB_SIZE }: 
 
   // ── Breathe ───────────────────────────────────────────────────────────────
   useEffect(() => {
-    const targetScale = active ? 1.08 : 1.05;
+    const targetScale = active ? 1.12 : 1.06; // more noticeable breathe
     const dur = active ? durations.breatheActive : durations.breathe;
     scale.value = withRepeat(
       withSequence(
-        withTiming(targetScale, { duration: dur / 2, easing: Easing.inOut(Easing.sin) }),
-        withTiming(1, { duration: dur / 2, easing: Easing.inOut(Easing.sin) })
+        withTiming(targetScale, { duration: dur / 2, easing: Easing.inOut(Easing.quad) }),
+        withTiming(1, { duration: dur / 2, easing: Easing.inOut(Easing.quad) })
       ),
       -1
     );
@@ -55,12 +55,12 @@ export const Orb = React.memo(function Orb({ active = false, size = ORB_SIZE }: 
   useEffect(() => {
     const dur = active ? durations.orbSwirlActive : durations.orbSwirl;
     swirlAngle.value = withRepeat(
-      withTiming(Math.PI * 2, { duration: dur, easing: Easing.linear }),
+      withTiming(swirlAngle.value + Math.PI * 2, { duration: dur, easing: Easing.linear }),
       -1
     );
     const innerDur = active ? durations.innerSwirlActive : durations.innerSwirl;
     innerAngle.value = withRepeat(
-      withTiming(-Math.PI * 2, { duration: innerDur, easing: Easing.linear }),
+      withTiming(innerAngle.value - Math.PI * 2, { duration: innerDur, easing: Easing.linear }),
       -1
     );
   }, [active, swirlAngle, innerAngle]);

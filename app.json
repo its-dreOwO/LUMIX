@@ -22,7 +22,12 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.READ_EXTERNAL_STORAGE"
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.USE_EXACT_ALARM",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
       ]
     },
     "plugins": [
@@ -35,7 +40,21 @@
         }
       ],
       "expo-sqlite",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icons/icon.png",
+          "color": "#000000",
+          "sounds": []
+        }
+      ],
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "LUMIX needs calendar access to create and read events."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -43,8 +62,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5b33dde9-500b-4bac-9efe-ec453f43a840"
+        "projectId": "7bccb164-6277-42f5-a651-c6b857a8de29"
       }
-    }
+    },
+    "owner": "dre2"
   }
 }

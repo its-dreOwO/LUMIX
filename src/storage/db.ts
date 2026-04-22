@@ -16,6 +16,7 @@ async function runMigrations(database: SQLite.SQLiteDatabase): Promise<void> {
   // Add new migrations by creating 002_xxx.sql, 003_xxx.sql etc.
   const migrations = [
     require('./migrations/001_init.sql'),
+    require('./migrations/002_memory.sql'),
   ];
 
   await database.execAsync('PRAGMA journal_mode = WAL;');

@@ -1,10 +1,12 @@
-import React from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
+import * as Network from 'expo-network';
 import { colors } from '@/theme/colors';
 import { fonts, fontSizes, letterSpacings } from '@/theme/typography';
 import { GradientBorder } from '@/components/GradientBorder';
 import { useLLMStore } from '@/state/llmStore';
+import { useNexusStore } from '@/state/nexusStore';
 
 const TABS = [
   { label: 'NEXUS', href: '/' },
@@ -15,25 +17,69 @@ export function TopNav() {
   const router = useRouter();
   const pathname = usePathname();
   const { status, modelName } = useLLMStore();
+  const { lumenMode } = useNexusStore();
+  
+  console.log('[DEBUG] TopNav lumenMode:', lumenMode);
+
+  const [isConnected, setIsConnected] = useState(true);
+  const [networkToast, setNetworkToast] = useState<'connected' | 'disconnected' | null>(null);
+  const isInitialMount = useRef(true);
+
+  useEffect(() => {
+    let mounted = true;
+    let fallbackTimer: NodeJS.Timeout;
+
+    const checkNetwork = async () => {
+      try {
+        const net = await Network.getNetworkStateAsync();
+        const currentConnected = net.isConnected ?? false;
+        
+        if (mounted) {
+          setIsConnected((prev) => {
+            if (!isInitialMount.current && prev !== currentConnected) {
+              setNetworkToast(currentConnected ? 'connected' : 'disconnected');
+              clearTimeout(fallbackTimer);
+              fallbackTimer = setTimeout(() => {
+                if (mounted) setNetworkToast(null);
+              }, 3000);
+            }
+            return currentConnected;
+          });
+          isInitialMount.current = false;
+        }
+      } catch {
+        // Assume connected or fallback gracefully if permission fails
+      }
+    };
+    checkNetwork();
+    const interval = setInterval(checkNetwork, 3000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+      clearTimeout(fallbackTimer);
+    };
+  }, []);
 
   const navigate = (href: string) => {
     router.replace(href as any);
   };
 
   const getStatusText = () => {
+    if (networkToast) return networkToast;
+
     switch (status) {
       case 'searching':
-        return 'searching model…';
+        return 'scanning for model…';
       case 'copying':
-        return 'copying model…';
+        return `copying ${modelName ?? 'model'}…`;
       case 'loading':
-        return 'loading model…';
+        return `loading ${modelName ?? 'model'}…`;
       case 'ready':
-        return modelName;
+        return modelName ?? 'ready';
       case 'unavailable':
-        return 'llm unavailable';
+        return modelName ?? 'llm unavailable';
       case 'error':
-        return 'model error';
+        return `error · ${modelName ?? 'model'}`;
       case 'idle':
       default:
         return null;
@@ -42,10 +88,18 @@ export function TopNav() {
 
   const statusText = getStatusText();
 
+  const borderColors = isConnected
+    ? undefined // use default internal colors
+    : ['rgba(255,255,255,0.7)', 'rgba(0,180,255,0.3)', 'rgba(255,255,255,0.15)'] as const;
+
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
-      {statusText && <Text style={styles.statusText}>{statusText}</Text>}
-      <GradientBorder radius={100} innerBg="rgba(8,10,18,0.55)">
+      {statusText && (
+        <View style={styles.statusContainer}>
+          <Text style={styles.statusText}>{statusText}</Text>
+        </View>
+      )}
+      <GradientBorder radius={100} innerBg="rgba(8,10,18,0.55)" colors={borderColors}>
         <View style={styles.pill}>
           {TABS.map((tab) => {
             const active = pathname === tab.href || (tab.href === '/' && pathname === '');

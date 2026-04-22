@@ -21,18 +21,6 @@ class LumixLlmModule : Module() {
       val options = LlmInference.LlmInferenceOptions.builder()
         .setModelPath(modelPath)
         .setMaxTokens(maxTokens)
-        .setTemperature(temperature.toFloat())
-        .setResultListener { partialResult, done ->
-          if (partialResult != null) {
-            sendEvent("LumixLLMToken", bundleOf("text" to partialResult))
-          }
-          if (done) {
-            sendEvent("LumixLLMDone", bundleOf())
-          }
-        }
-        .setErrorListener { e ->
-          sendEvent("LumixLLMError", bundleOf("message" to (e?.message ?: "Unknown generation error")))
-        }
         .build()
       llmInference = LlmInference.createFromOptions(context, options)
     }
@@ -44,7 +32,14 @@ class LumixLlmModule : Module() {
         return@Function
       }
       try {
-        inference.generateResponseAsync(prompt)
+        inference.generateResponseAsync(prompt) { partialResult: String?, done: Boolean ->
+          if (partialResult != null) {
+            sendEvent("LumixLLMToken", bundleOf("text" to partialResult))
+          }
+          if (done) {
+            sendEvent("LumixLLMDone", bundleOf())
+          }
+        }
       } catch (e: Exception) {
         sendEvent("LumixLLMError", bundleOf("message" to (e.message ?: "Unknown error during generation")))
       }
@@ -52,6 +47,11 @@ class LumixLlmModule : Module() {
 
     Function("stop") {
       // LlmInference has no mid-generation cancel API; no-op for now.
+    }
+
+    Function("unload") {
+      llmInference?.close()
+      llmInference = null
     }
   }
 }

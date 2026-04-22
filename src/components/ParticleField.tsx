@@ -158,14 +158,12 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
         particles.value = createParticles(W, H, DPR);
         const baseAngles = [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6]; // 12, 4, 8 o'clock
         const maxOffset = Math.sqrt(W * W + H * H);
+        // Stagger start offsets so waves arrive evenly spaced, all originating from orb (offset=0)
+        const third = maxOffset * 0.8 / 3;
         waves.value = {
           dirX: baseAngles.map((a) => Math.cos(a + (Math.random() - 0.5) * 0.7)),
           dirY: baseAngles.map((a) => Math.sin(a + (Math.random() - 0.5) * 0.7)),
-          offset: [
-            -maxOffset * 0.5 + Math.random() * maxOffset,
-            -maxOffset * 0.5 + Math.random() * maxOffset,
-            -maxOffset * 0.5 + Math.random() * maxOffset,
-          ],
+          offset: [maxOffset * 0.8, maxOffset * 0.8 + third, maxOffset * 0.8 + third * 2], // waves start outside, move inward
           speed: [
             1.5 + Math.random() * 0.7,
             1.5 + Math.random() * 0.7,
@@ -197,11 +195,23 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
         'worklet';
         const next = a ? 1 : 0;
         if (next === 1 && activeMode.value === 0) {
-          // Reset wave offsets so they "burst" from the orb
+          // Switch to Active (Thinking): clear directional waves, stage radial waves
           const wv = waves.value;
-          wv.offset = [0, 0, 0];
-          // Clear any current pulses so we only have the "new" generating waves
+          const maxOffset = Math.sqrt(W * W + H * H);
+          wv.offset = [maxOffset * 0.8, maxOffset * 0.8, maxOffset * 0.8];
+          
+          // Start 2 radial waves with a delay between them.
+          wv.radius = [0, -maxOffset * 0.35, 0];
+          wv.radialSpeed = [4.5, 4.5, 4.5];
+          
+          // Clear targeted token pulses
           pulses.value = { x: [], y: [], r: [], life: [], count: 0 };
+        } else if (next === 0 && activeMode.value === 1) {
+          // Switch to Idle
+          const wv = waves.value;
+          const maxOffset = Math.sqrt(W * W + H * H);
+          const third = maxOffset * 0.8 / 3;
+          wv.offset = [maxOffset * 0.8, maxOffset * 0.8 + third, maxOffset * 0.8 + third * 2];
         }
         activeMode.value = next;
       })();
@@ -214,9 +224,18 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
     },
   }));
 
-  // Physics loop — runs entirely on UI thread at display frame rate
-  useFrameCallback(() => {
+  const lastFrameTime = useSharedValue(0);
+
+  // Physics loop — fixed timestep at 30fps target (33ms budget per tick).
+  // This skips redundant vsync ticks so we don't compete with the LLM CPU thread.
+  useFrameCallback((frameInfo) => {
     'worklet';
+    const now = frameInfo.timestamp; // ms from reanimated
+    const TARGET_MS = 33.3; // 30fps
+
+    if (now - lastFrameTime.value < TARGET_MS) return; // skip this vsync
+    lastFrameTime.value = now;
+
     const ps = particles.value;
     if (!ps) return;
 
@@ -229,22 +248,42 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
     const flowX = Math.cos(currentAngle) * currentMag;
     const flowY = Math.sin(currentAngle) * currentMag;
 
-    // Update waves
     const wv = waves.value;
     const isActive = activeMode.value === 1;
-    const speedMul = isActive ? 1.8 : 1.0;
 
-    // Always directional waves — active mode just runs them faster
     const maxOffset = Math.sqrt(W * W + H * H);
-    for (let wi = 0; wi < 3; wi++) {
-      wv.offset[wi] += wv.speed[wi] * speedMul;
-      if (wv.offset[wi] > maxOffset * 0.6) {
-        wv.offset[wi] = -maxOffset * 0.6;
-        const baseAngle = [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6][wi];
-        const jittered = baseAngle + (Math.random() - 0.5) * 0.7;
-        wv.dirX[wi] = Math.cos(jittered);
-        wv.dirY[wi] = Math.sin(jittered);
-        wv.speed[wi] = 1.5 + Math.random() * 0.7;
+
+    if (!isActive) {
+      // Idle Mode: Linear waves moving inward from outside the screen
+      for (let wi = 0; wi < 3; wi++) {
+        wv.offset[wi] -= wv.speed[wi] * 1.0;
+        if (wv.offset[wi] < -maxOffset * 0.8) {
+          wv.offset[wi] = maxOffset * 0.8;
+          const baseAngle = [-Math.PI / 2, Math.PI / 6, (5 * Math.PI) / 6][wi];
+          const jittered = baseAngle + (Math.random() - 0.5) * 0.7;
+          wv.dirX[wi] = Math.cos(jittered);
+          wv.dirY[wi] = Math.sin(jittered);
+          wv.speed[wi] = 1.5 + Math.random() * 0.7;
+        }
+      }
+    } else {
+      // Active Mode: Two radial waves spawning from orb and speeding outwards
+      // Uses the first two indices of the radial array.
+      for (let wi = 0; wi < 2; wi++) {
+        if (wv.radius[wi] >= 0) {
+          wv.radius[wi] += wv.radialSpeed[wi];
+        } else {
+          // If radius is negative, it's in a delay state.
+          // Add to it until it reaches 0 (spawning point).
+          wv.radius[wi] += wv.radialSpeed[wi]; 
+        }
+
+        // When it fully exits the screen (corners distance)
+        if (wv.radius[wi] > maxOffset * 0.8) {
+          // Delay the respawn based on index so they are staggered
+          wv.radius[wi] = wi === 0 ? 0 : -maxOffset * 0.4; // 2nd wave spawns when 1st is halfway
+          wv.radialSpeed[wi] = 4.5;
+        }
       }
     }
 
@@ -333,18 +372,39 @@ export const ParticleField = forwardRef<ParticleFieldRef>(function ParticleField
         const py = ps.y[i];
         const pr = ps.r[i];
 
-        // Directional waves referenced to orb center
         let brightness = 0;
-        for (let wi = 0; wi < 3; wi++) {
-          const rx = px - orbCx;
-          const ry = py - orbCy;
-          const signedDist = rx * wv2.dirX[wi] + ry * wv2.dirY[wi] - wv2.offset[wi];
-          const d = Math.abs(signedDist);
-          if (d < WAVE_WIDTH) {
-            const f = 0.5 + 0.5 * Math.cos((d / WAVE_WIDTH) * Math.PI);
-            if (f > brightness) brightness = f;
+        const isActive = activeMode.value === 1;
+
+        if (!isActive) {
+          // Idle: 3 Linear waves moving inward
+          for (let wi = 0; wi < 3; wi++) {
+            const rx = px - orbCx;
+            const ry = py - orbCy;
+            const signedDist = rx * wv2.dirX[wi] + ry * wv2.dirY[wi] - wv2.offset[wi];
+            const d = Math.abs(signedDist);
+            if (d < WAVE_WIDTH) {
+              const f = 0.5 + 0.5 * Math.cos((d / WAVE_WIDTH) * Math.PI);
+              if (f > brightness) brightness = f;
+            }
+          }
+        } else {
+          // Active: 2 Radial rings expanding outward from the orb center
+          const dx = px - orbCx;
+          const dy = py - orbCy;
+          const distFromOrb = Math.sqrt(dx * dx + dy * dy);
+
+          for (let wi = 0; wi < 2; wi++) {
+            const waveRadius = wv2.radius[wi];
+            if (waveRadius > 0) {
+              const d = Math.abs(distFromOrb - waveRadius);
+              if (d < WAVE_WIDTH) {
+                const f = 0.5 + 0.5 * Math.cos((d / WAVE_WIDTH) * Math.PI);
+                if (f > brightness) brightness = f;
+              }
+            }
           }
         }
+
         const baseAlpha = 0.08; // dim when no wave nearby
         const a = baseAlpha + (ps.alpha[i] - baseAlpha) * brightness;
 

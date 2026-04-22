@@ -21,4 +21,5 @@ export interface LumixLLMNative {
   load(modelPath: string, maxTokens: number, temperature: number): Promise<void>;
   generate(prompt: string): void;
   stop(): void;
+  unload(): void;
 }
