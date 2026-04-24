@@ -22,6 +22,7 @@ import { BlurView } from 'expo-blur';
 import { useNexusStore } from '@/state/nexusStore';
 import { colors } from '@/theme/colors';
 import { fonts, fontSizes } from '@/theme/typography';
+import { OPENROUTER_MODEL } from '@/ai/OpenRouterProvider';
 
 const HIDDEN_Y = 800;
 const CLOSE_THRESHOLD = 150;
@@ -32,7 +33,7 @@ interface SettingsSheetProps {
 }
 
 export function SettingsSheet({ isVisible, onClose }: SettingsSheetProps) {
-  const { lumenMode, setLumenMode } = useNexusStore();
+  const { lumenMode, setLumenMode, debugMode, setDebugMode } = useNexusStore();
   const [shouldMount, setShouldMount] = useState(isVisible);
   const translateY = useSharedValue(HIDDEN_Y);
   const opacity = useSharedValue(0);
@@ -126,13 +127,19 @@ export function SettingsSheet({ isVisible, onClose }: SettingsSheetProps) {
           <Text style={styles.headerTitle}>Settings</Text>
 
           <View style={styles.optionsContainer}>
-            <SettingRow 
-              label="Lumen mode" 
-              description={lumenMode ? 'google/gemma-4-31b-it:free running' : undefined}
-              value={lumenMode} 
-              onToggle={setLumenMode} 
+            <SettingRow
+              label="Lumen mode"
+              description={lumenMode ? `${OPENROUTER_MODEL} via OpenRouter` : undefined}
+              value={lumenMode}
+              onToggle={setLumenMode}
             />
             <SettingRow label="Deep Thinking Mode" initialValue={false} />
+            <SettingRow
+              label="Debug mode"
+              description={debugMode ? 'Type <TOOL>payload</TOOL> to test tools directly' : undefined}
+              value={debugMode}
+              onToggle={setDebugMode}
+            />
           </View>
         </View>
       </Animated.View>

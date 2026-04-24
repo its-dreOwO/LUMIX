@@ -12,7 +12,7 @@ Built with React Native + Expo SDK 52. Runs entirely offline after first setup.
 |---|---|
 | Framework | Expo SDK 52 + Expo Router v4 |
 | UI | React Native, Reanimated 3, Skia, react-native-svg |
-| AI | Gemma 3n E4B on-device via MediaPipe (custom native module) |
+| AI | Gemma 4 E2B on-device via LiteRT-LM (custom native module) |
 | Storage | expo-sqlite (chat, notes, events) + expo-secure-store |
 | Weather | Open-Meteo (no API key) |
 | State | Zustand |
@@ -42,9 +42,9 @@ npm install
 
 ### Model (one-time)
 
-1. Accept licence at https://huggingface.co/google/gemma-3n-E4B-it-litert-preview
-2. Download `gemma-3n-e4b-it-gpu-int8.task` (~2 GB)
-3. With phone connected via USB: `adb push gemma-3n-e4b-it-gpu-int8.task /sdcard/Download/lumix/`
+1. Accept licence at https://huggingface.co/google/gemma-4-E2B-it-litert-prebuilt
+2. Download `gemma-4-E2B-it.litertlm` (~1.7 GB)
+3. With phone connected via USB: `adb push gemma-4-E2B-it.litertlm /sdcard/Download/`
 4. First app launch copies it to internal storage automatically
 
 ---

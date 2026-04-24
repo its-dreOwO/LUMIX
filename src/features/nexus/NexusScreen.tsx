@@ -16,7 +16,6 @@ import { SettingsSheet } from './components/SettingsSheet';
 import { useChatSession } from './hooks/useChatSession';
 import { useParticleRef } from '@/state/particleContext';
 import { useKeyboardHeight } from '@/utils/useKeyboardHeight';
-import { useNexusStore } from '@/state/nexusStore';
 
 const ORB_WRAP = 220;
 const ANIM = { duration: 380, easing: Easing.out(Easing.cubic) };
@@ -29,9 +28,8 @@ export function NexusScreen() {
   const screenH = SCREEN_H;
   const particleRef = useParticleRef();
   const flatListRef = useRef<FlatList>(null);
-  const { messages, orbActive, inputText, setInputText, sendMessage } = useChatSession();
+  const { messages, orbActive, inputText, setInputText, sendMessage, startNewSession } = useChatSession();
   const keyboardHeight = useKeyboardHeight();
-  const clearMessages = useNexusStore((s) => s.clearMessages);
 
   const hasMessages = messages.length > 0;
 
@@ -127,7 +125,7 @@ export function NexusScreen() {
         disabled={orbActive}
         bottomInset={keyboardHeight}
         showNewSession={true}
-        onNewSession={clearMessages}
+        onNewSession={startNewSession}
         onOpenSettings={() => setIsSettingsVisible(true)}
       />
 

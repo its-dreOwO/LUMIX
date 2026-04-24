@@ -3,7 +3,20 @@
  * Requires expo-calendar native module (included in next EAS build).
  */
 
+import { Linking } from 'react-native';
 import * as Calendar from 'expo-calendar';
+
+async function ensureCalendarPermission(): Promise<{ granted: boolean; message?: string }> {
+  const existing = await Calendar.getCalendarPermissionsAsync();
+  if (existing.status === 'granted') return { granted: true };
+  if (!existing.canAskAgain) {
+    Linking.openSettings();
+    return { granted: false, message: 'Calendar permission was permanently denied. Opening app Settings — grant "Calendar" access and try again.' };
+  }
+  const { status } = await Calendar.requestCalendarPermissionsAsync();
+  if (status !== 'granted') return { granted: false, message: 'Calendar failed: Permission was denied. Ask Dre to grant calendar access.' };
+  return { granted: true };
+}
 
 async function getDefaultCalendarId(): Promise<string | null> {
   const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
@@ -14,11 +27,6 @@ async function getDefaultCalendarId(): Promise<string | null> {
   return writable?.id ?? calendars[0]?.id ?? null;
 }
 
-export async function requestCalendarPermission(): Promise<boolean> {
-  const { status } = await Calendar.requestCalendarPermissionsAsync();
-  return status === 'granted';
-}
-
 export async function createCalendarEvent(
   title: string,
   isoStart: string,
@@ -26,10 +34,8 @@ export async function createCalendarEvent(
   notes?: string
 ): Promise<string> {
   try {
-    const granted = await requestCalendarPermission();
-    if (!granted) {
-      return 'Calendar failed: Permission was denied. Ask Dre to grant calendar access.';
-    }
+    const perm = await ensureCalendarPermission();
+    if (!perm.granted) return perm.message ?? 'Calendar failed: Permission denied.';
 
     const startDate = new Date(isoStart);
     const endDate = new Date(isoEnd);
@@ -67,10 +73,8 @@ export async function createCalendarEvent(
 
 export async function listUpcomingEvents(days = 7): Promise<string> {
   try {
-    const granted = await requestCalendarPermission();
-    if (!granted) {
-      return 'Calendar failed: Permission was denied.';
-    }
+    const perm = await ensureCalendarPermission();
+    if (!perm.granted) return perm.message ?? 'Calendar failed: Permission denied.';
 
     const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
     const calendarIds = calendars.map((c) => c.id);

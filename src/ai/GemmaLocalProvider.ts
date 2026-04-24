@@ -1,6 +1,6 @@
 import type { LLMProvider, GenerateOpts } from './LLMProvider';
 import { lumixLLMNative, lumixLLMEmitter, lumixLLMAvailable } from '../../modules/lumix-llm';
-import { buildGemmaPrompt, NEXUS_SYSTEM_PROMPT } from './persona';
+import { NEXUS_SYSTEM_PROMPT } from './persona';
 
 export class GemmaLocalProvider implements LLMProvider {
   private ready = false;
@@ -9,9 +9,10 @@ export class GemmaLocalProvider implements LLMProvider {
     return this.ready;
   }
 
-  async load(modelPath: string, maxTokens = 8192, temperature = 0.8): Promise<void> {
+  // Loads the model and seeds the persistent Conversation with the static persona.
+  async load(modelPath: string): Promise<void> {
     if (!lumixLLMAvailable) return;
-    await lumixLLMNative.load(modelPath, maxTokens, temperature);
+    await lumixLLMNative.load(modelPath, NEXUS_SYSTEM_PROMPT);
     this.ready = true;
   }
 
@@ -21,16 +22,12 @@ export class GemmaLocalProvider implements LLMProvider {
       return;
     }
 
-    // Wrap user message(s) in Gemma's chat template with NEXUS persona injected.
-    // Caller can override the system prompt via opts.systemPrompt.
-    const formattedPrompt = buildGemmaPrompt(
-      prompt,
-      opts?.systemPrompt ?? NEXUS_SYSTEM_PROMPT,
-    );
-
-    console.log('--- SENDING GENERATE PROMPT ---');
-    console.log(formattedPrompt);
-    console.log('-------------------------------');
+    // Extract only the latest message — the Conversation holds prior history internally.
+    const messages = typeof prompt === 'string'
+      ? [{ role: 'user', content: prompt }]
+      : prompt;
+    const lastMessage = messages[messages.length - 1].content;
+    const dynamicContext = opts?.dynamicContext ?? '';
 
     const tokens: string[] = [];
     let done = false;
@@ -47,7 +44,7 @@ export class GemmaLocalProvider implements LLMProvider {
       done = true;
     });
 
-    lumixLLMNative.generate(formattedPrompt);
+    lumixLLMNative.generate(lastMessage, dynamicContext);
 
     try {
       while (!done || tokens.length > 0) {
@@ -65,9 +62,14 @@ export class GemmaLocalProvider implements LLMProvider {
     }
   }
 
+  resetConversation(): void {
+    if (!lumixLLMAvailable) return;
+    lumixLLMNative.resetConversation();
+  }
+
   async unload(): Promise<void> {
     if (!lumixLLMAvailable) return;
-    await lumixLLMNative.unload();
+    lumixLLMNative.unload();
     this.ready = false;
   }
 }

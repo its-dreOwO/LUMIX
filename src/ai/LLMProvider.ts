@@ -1,7 +1,8 @@
 export interface GenerateOpts {
   maxTokens?: number;
   temperature?: number;
-  systemPrompt?: string;
+  systemPrompt?: string;     // used by Lumen/cloud providers
+  dynamicContext?: string;   // used by local provider — date + memory, prepended per turn
 }
 
 export interface LLMProvider {
@@ -11,4 +12,6 @@ export interface LLMProvider {
   generate(prompt: string | { role: string; content: string }[], opts?: GenerateOpts): AsyncIterable<string>;
   /** Frees resources associated with the model. */
   unload?(): Promise<void>;
+  /** Resets the conversation state (e.g. on new session) without unloading the model. */
+  resetConversation?(): void;
 }

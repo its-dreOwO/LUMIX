@@ -29,14 +29,14 @@ const DEST_DIR = (DOC_DIR.endsWith('/') ? DOC_DIR : DOC_DIR + '/') + 'models/';
 
 /**
  * Filename patterns to accept, in priority order.
- * Any .task file whose name contains one of these substrings counts.
+ * Any .litertlm file whose name contains one of these substrings counts.
  */
 const MODEL_NAME_PATTERNS = [
-  'gemma-3n-E4B-it-int4',
-  'gemma-3n-e4b-it-int4',
-  'gemma-3n-E4B-it-int8',
-  'gemma-3n-e4b-it-gpu-int8',
-  'gemma-3n',  // catch-all for other gemma-3n variants
+  'gemma-4-E4B-it',
+  'gemma-4-e4b-it',
+  'gemma-4-E2B-it',
+  'gemma-4-e2b-it',
+  'gemma-4',  // catch-all for other gemma-4 variants
 ];
 
 /**
@@ -45,21 +45,21 @@ const MODEL_NAME_PATTERNS = [
  */
 const FAST_PATH_URIS: string[] = MODEL_NAME_PATTERNS.flatMap((pat) => [
   // Already in internal storage
-  `${DEST_DIR}${pat}.task`,
+  `${DEST_DIR}${pat}.litertlm`,
   // App-scoped external storage — always readable without special permissions
-  `file:///sdcard/Android/data/com.lumix.app/files/models/${pat}.task`,
-  `file:///storage/emulated/0/Android/data/com.lumix.app/files/models/${pat}.task`,
+  `file:///sdcard/Android/data/com.lumix.app/files/models/${pat}.litertlm`,
+  `file:///storage/emulated/0/Android/data/com.lumix.app/files/models/${pat}.litertlm`,
   // Shared Download folder (may be blocked by scoped storage on Android 13+)
-  `file:///sdcard/Download/lumix/${pat}.task`,
-  `file:///sdcard/Download/LUMIX/${pat}.task`,
-  `file:///sdcard/Download/${pat}.task`,
-  `file:///storage/emulated/0/Download/lumix/${pat}.task`,
-  `file:///storage/emulated/0/Download/${pat}.task`,
-  `file:///sdcard/${pat}.task`,
+  `file:///sdcard/Download/lumix/${pat}.litertlm`,
+  `file:///sdcard/Download/LUMIX/${pat}.litertlm`,
+  `file:///sdcard/Download/${pat}.litertlm`,
+  `file:///storage/emulated/0/Download/lumix/${pat}.litertlm`,
+  `file:///storage/emulated/0/Download/${pat}.litertlm`,
+  `file:///sdcard/${pat}.litertlm`,
 ]);
 
 /**
- * Directories to scan (listed for any .task file) when fast paths miss.
+ * Directories to scan (listed for any .litertlm file) when fast paths miss.
  * Listed in order — first match wins.
  */
 const SCAN_DIRS = [
@@ -88,8 +88,8 @@ function shortDir(uri: string): string {
   return uri.replace('file://', '').replace('/storage/emulated/0', '/sdcard');
 }
 
-function isGemmaTaskFile(filename: string): boolean {
-  if (!filename.endsWith('.task')) return false;
+function isGemmaModelFile(filename: string): boolean {
+  if (!filename.endsWith('.litertlm')) return false;
   const lower = filename.toLowerCase();
   return lower.includes('gemma') || MODEL_NAME_PATTERNS.some((p) => filename.includes(p));
 }
@@ -113,7 +113,7 @@ async function fastProbe(): Promise<string | null> {
 }
 
 /**
- * Phase 2: list each candidate directory and return the first .task file
+ * Phase 2: list each candidate directory and return the first .litertlm file
  * whose name matches a Gemma pattern. Calls onScanDir(dir) before each probe
  * so the UI can update.
  */
@@ -126,15 +126,14 @@ async function scanDirs(onScanDir: (dir: string) => void): Promise<string | null
 
       const entries = await FileSystem.readDirectoryAsync(dir);
 
-      // Priority: prefer the int4 variant if multiple .task files exist
-      const tasks = entries.filter(isGemmaTaskFile);
+      const tasks = entries.filter(isGemmaModelFile);
       if (tasks.length === 0) continue;
 
-      // Sort so int4 comes before int8
+      // Sort so E2B comes before E4B (smaller model preferred if multiple exist)
       tasks.sort((a, b) => {
-        const aInt4 = a.toLowerCase().includes('int4') ? 0 : 1;
-        const bInt4 = b.toLowerCase().includes('int4') ? 0 : 1;
-        return aInt4 - bInt4;
+        const aE2b = a.toLowerCase().includes('e2b') ? 0 : 1;
+        const bE2b = b.toLowerCase().includes('e2b') ? 0 : 1;
+        return aE2b - bE2b;
       });
 
       return dir + tasks[0];
@@ -173,21 +172,26 @@ export default function SetupScreen() {
       // ── Step 1: use cached path from a previous launch ──────────────────
       const stored = await SecureStore.getItemAsync(MODEL_PATH_KEY);
       if (stored) {
-        const info = await FileSystem.getInfoAsync(stored);
-        if (info.exists) {
-          const storedName = stored.split('/').pop()?.replace('.task', '') ?? 'model';
-          store.setModelName(storedName);
-          setStatus('Loading model…');
-          setSubStatus(storedName);
-          store.setStatus('loading');
-          await loadModel(toFsPath(stored));
-          markModelReady();
-          store.setStatus('ready');
-          router.replace('/');
-          return;
+        // Invalidate paths from the old MediaPipe .task format — LiteRT-LM needs .litertlm
+        if (stored.endsWith('.task')) {
+          await SecureStore.deleteItemAsync(MODEL_PATH_KEY);
+        } else {
+          const info = await FileSystem.getInfoAsync(stored);
+          if (info.exists) {
+            const storedName = stored.split('/').pop()?.replace('.litertlm', '') ?? 'model';
+            store.setModelName(storedName);
+            setStatus('Loading model…');
+            setSubStatus(storedName);
+            store.setStatus('loading');
+            await loadModel(toFsPath(stored));
+            markModelReady();
+            store.setStatus('ready');
+            router.replace('/');
+            return;
+          }
+          // Cached path is stale — clear it and fall through to search
+          await SecureStore.deleteItemAsync(MODEL_PATH_KEY);
         }
-        // Cached path is stale — clear it and fall through to search
-        await SecureStore.deleteItemAsync(MODEL_PATH_KEY);
       }
 
       // ── Step 2: fast exact-path probes ──────────────────────────────────
@@ -205,9 +209,9 @@ export default function SetupScreen() {
       if (!sourceUri) {
         setError(
           'Model file not found.\n\n' +
-          'LUMIX searched all common locations on your phone but could not find a Gemma 3n .task file.\n\n' +
+          'LUMIX searched all common locations on your phone but could not find a Gemma 4 .litertlm file.\n\n' +
           'Place the file anywhere in:\n/sdcard/Download/\n\n' +
-          'Expected filename:\ngemma-3n-E4B-it-int4.task\n\nThen restart the app.'
+          'Expected filename:\ngemma-4-E2B-it.litertlm\n\nThen restart the app.'
         );
         store.setStatus('error');
         return;
@@ -217,7 +221,7 @@ export default function SetupScreen() {
       await FileSystem.makeDirectoryAsync(DEST_DIR, { intermediates: true });
       const filenameWithExt = sourceUri.split('/').pop()!;
       const destPath = DEST_DIR + filenameWithExt;
-      const modelName = filenameWithExt.replace('.task', '');
+      const modelName = filenameWithExt.replace('.litertlm', '');
 
       if (sourceUri !== destPath) {
         setStatus('Found: ' + filenameWithExt + '\nCopying to app storage…');
@@ -231,7 +235,7 @@ export default function SetupScreen() {
 
       await SecureStore.setItemAsync(MODEL_PATH_KEY, destPath);
 
-      // ── Step 5: load into MediaPipe ─────────────────────────────────────
+      // ── Step 5: load into LiteRT-LM ─────────────────────────────────────
       setStatus('Loading model…');
       setSubStatus(modelName);
       store.setStatus('loading');

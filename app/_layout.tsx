@@ -1,7 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Slot } from 'expo-router';
+import { Slot, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 
@@ -29,6 +35,31 @@ import { ParticleProvider } from '@/state/particleContext';
 import { colors } from '@/theme/colors';
 
 SplashScreen.preventAutoHideAsync();
+
+function ScreenSlot() {
+  const pathname = usePathname();
+  const opacity = useSharedValue(1);
+  const translateY = useSharedValue(0);
+
+  useEffect(() => {
+    // Fade + slight slide out, then snap back and fade in
+    opacity.value = 0;
+    translateY.value = 6;
+    opacity.value = withTiming(1, { duration: 280, easing: Easing.out(Easing.cubic) });
+    translateY.value = withTiming(0, { duration: 280, easing: Easing.out(Easing.cubic) });
+  }, [pathname]);
+
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  return (
+    <Animated.View style={[StyleSheet.absoluteFill, animStyle]}>
+      <Slot />
+    </Animated.View>
+  );
+}
 
 export default function RootLayout() {
   const particleRef = useRef<ParticleFieldRef>(null);
@@ -59,8 +90,8 @@ export default function RootLayout() {
         <StatusBar style="light" backgroundColor="transparent" translucent />
         {/* Particle canvas lives here so it persists across screen changes */}
         <ParticleField ref={particleRef} />
-        {/* Screen content */}
-        <Slot />
+        {/* Screen content — animated on route change */}
+        <ScreenSlot />
         {/* Top nav overlay — always visible */}
         <TopNav />
       </View>

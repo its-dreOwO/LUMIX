@@ -1,7 +1,11 @@
 import { useCallback, useRef, useEffect } from 'react';
+import * as SecureStore from 'expo-secure-store';
 import { useNexusStore } from '@/state/nexusStore';
-import { llmProvider, openRouterProvider } from '@/ai';
+import { llmProvider, openRouterProvider, loadModel, markModelReady } from '@/ai';
+import { useLLMStore } from '@/state/llmStore';
 import { insertMessage } from '@/storage/ChatRepository';
+
+const MODEL_PATH_KEY = 'lumix_model_path';
 
 // ─── Tool tags the model can emit ────────────────────────────────────────────
 // Each tag name maps to a handler that receives the raw inner payload string
@@ -25,51 +29,63 @@ function detectActiveTool(buffer: string): ToolTag | null {
 }
 
 async function dispatchTool(tag: ToolTag, payload: string): Promise<string> {
+  console.log(`[Tool] ${tag} →`, payload);
+  let result: string;
   switch (tag) {
     case 'SEARCH': {
       const { performWebSearch } = await import('@/services/SearchService');
-      return performWebSearch(payload.trim());
+      result = await performWebSearch(payload.trim());
+      break;
     }
     case 'REMINDER': {
       const { scheduleReminder } = await import('@/services/ReminderService');
       try {
         const { title, body, datetime } = JSON.parse(payload);
-        return scheduleReminder(title ?? 'Reminder', body ?? '', datetime);
+        result = await scheduleReminder(title ?? 'Reminder', body ?? '', datetime);
       } catch {
-        return 'Reminder failed: Invalid JSON payload from model.';
+        result = 'Reminder failed: Invalid JSON payload from model.';
       }
+      break;
     }
     case 'CALENDAR': {
       const { createCalendarEvent, listUpcomingEvents } = await import('@/services/CalendarService');
       try {
         const data = JSON.parse(payload);
-        if (data.action === 'list') return listUpcomingEvents(data.days ?? 7);
-        return createCalendarEvent(data.title, data.start, data.end, data.notes);
+        result = data.action === 'list'
+          ? await listUpcomingEvents(data.days ?? 7)
+          : await createCalendarEvent(data.title, data.start, data.end, data.notes);
       } catch {
-        return 'Calendar failed: Invalid JSON payload from model.';
+        result = 'Calendar failed: Invalid JSON payload from model.';
       }
+      break;
     }
     case 'NOTE': {
       const { createNote, listNotes } = await import('@/services/NotesService');
       try {
         const data = JSON.parse(payload);
-        if (data.action === 'list') return listNotes();
-        return createNote(data.title ?? 'Note', data.body ?? '');
+        result = data.action === 'list'
+          ? await listNotes()
+          : await createNote(data.title ?? 'Note', data.body ?? '');
       } catch {
-        return 'Note failed: Invalid JSON payload from model.';
+        result = 'Note failed: Invalid JSON payload from model.';
       }
+      break;
     }
     case 'MEMORY': {
       const { saveFactToMemory } = await import('@/services/MemoryService');
       try {
         const data = JSON.parse(payload);
-        if (data.action === 'save') return saveFactToMemory(data.fact);
-        return 'Memory failed: Unknown action.';
+        result = data.action === 'save'
+          ? await saveFactToMemory(data.fact)
+          : 'Memory failed: Unknown action.';
       } catch {
-        return 'Memory failed: Invalid JSON payload from model.';
+        result = 'Memory failed: Invalid JSON payload from model.';
       }
+      break;
     }
   }
+  console.log(`[Tool] ${tag} ←`, result!);
+  return result!;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -81,6 +97,7 @@ export function useChatSession() {
     inputText,
     sessionId,
     lumenMode,
+    debugMode,
     addMessage,
     updateLastAiMessage,
     setOrbActive,
@@ -88,10 +105,30 @@ export function useChatSession() {
   } = useNexusStore();
 
   const streamingRef = useRef(false);
+  const cancelRef = useRef(false);
 
   useEffect(() => {
+    const llmStore = useLLMStore.getState();
     if (lumenMode) {
       llmProvider.unload?.();
+      llmStore.setStatus('ready');
+      llmStore.setModelName('Gemini 2.5 Flash Lite');
+    } else {
+      (async () => {
+        const stored = await SecureStore.getItemAsync(MODEL_PATH_KEY);
+        if (!stored) return;
+        const path = stored.startsWith('file://') ? stored.slice(7) : stored;
+        const modelName = stored.split('/').pop()?.replace(/\.(task|litertlm)$/, '') ?? 'model';
+        try {
+          llmStore.setStatus('loading');
+          llmStore.setModelName(modelName);
+          await loadModel(path);
+          markModelReady();
+          llmStore.setStatus('ready');
+        } catch {
+          llmStore.setStatus('error');
+        }
+      })();
     }
   }, [lumenMode]);
 
@@ -109,6 +146,29 @@ export function useChatSession() {
         streaming: false,
       };
       addMessage(userMsg);
+
+      // Debug mode: dispatch tool directly when input is <TAG>payload</TAG>
+      if (debugMode) {
+        const debugMatch = text.match(/^<(SEARCH|REMINDER|CALENDAR|NOTE|MEMORY)>([\s\S]*?)<\/\1>$/);
+        if (debugMatch) {
+          const tag = debugMatch[1] as ToolTag;
+          const payload = debugMatch[2];
+          const aiMsg = { id: (Date.now() + 1).toString(), role: 'ai' as const, content: '*Running tool...*', streaming: true };
+          addMessage(aiMsg);
+          setOrbActive(true);
+          streamingRef.current = true;
+          try {
+            const result = await dispatchTool(tag, payload);
+            updateLastAiMessage(`[Debug · ${tag}]\n${result}`, true);
+          } catch (e: any) {
+            updateLastAiMessage(`[Debug · ${tag}] Error: ${e.message}`, true);
+          } finally {
+            streamingRef.current = false;
+            setOrbActive(false);
+          }
+          return;
+        }
+      }
 
       // Trigger pulse from bottom-center where input dock is
       onParticlePulse?.(200, 700);
@@ -132,22 +192,22 @@ export function useChatSession() {
         let passCount = 0;
         let injectedToolContext = '';
         let finalUiText = '';
+        // Accumulates shown text across passes so tool status lines and pre-tool
+        // text are preserved when the next pass starts streaming.
+        let uiPrefix = '';
 
-        // Fetch memory pool facts to inject into the system context
-        console.log('[DEBUG] useChatSession: lumenMode is', lumenMode);
+        // Fetch memory pool facts + build full system prompt with live timestamp
+        // Pass the user's message as the FTS5 query so relevant facts are prioritised
         const { fetchMemoriesForContext } = await import('@/services/MemoryService');
-        const memoryLimit = lumenMode ? 150 : 25; // Scale limit based on context window
-        console.log('[DEBUG] useChatSession: fetching memories with limit', memoryLimit);
-        const memoryText = await fetchMemoriesForContext(memoryLimit);
-        console.log('[DEBUG] useChatSession: fetched memory text length', memoryText.length);
-        
-        // Import the base persona to append the dynamic memories
-        const { NEXUS_SYSTEM_PROMPT } = await import('@/ai/persona');
-        const systemPrompt = memoryText 
-          ? `${NEXUS_SYSTEM_PROMPT}\n${memoryText}` 
-          : NEXUS_SYSTEM_PROMPT;
+        const memoryLimit = lumenMode ? 150 : 25;
+        const memoryText = await fetchMemoriesForContext(memoryLimit, text);
+        const { buildSystemPrompt, buildDynamicContext } = await import('@/ai/persona');
+        // Lumen (cloud) needs the full prompt every call; local uses only the small
+        // dynamic block — the static persona is KV-cached in the persistent Conversation.
+        const systemPrompt = buildSystemPrompt(memoryText || undefined);
+        const dynamicContext = buildDynamicContext(memoryText || undefined);
 
-        while (!isComplete && passCount < 4) {
+        while (!isComplete && passCount < 4 && !cancelRef.current) {
           passCount++;
 
           // Build context array from history
@@ -161,17 +221,24 @@ export function useChatSession() {
           }
 
           const provider = lumenMode ? openRouterProvider : llmProvider;
-          console.log('[DEBUG] useChatSession: calling provider.generate with', provider.constructor.name);
           const stream = provider.generate(promptContext, {
             maxTokens: 1024,
             temperature: 0.7,
-            systemPrompt: systemPrompt,
+            systemPrompt,
+            dynamicContext,
           });
 
           let streamBuffer = '';
           let activeTool: ToolTag | null = null;
+          let modelNameSynced = false;
 
           for await (const token of stream) {
+            if (cancelRef.current) break;
+            if (lumenMode && !modelNameSynced) {
+              const active = openRouterProvider.activeModel;
+              if (active) useLLMStore.getState().setModelName(active);
+              modelNameSynced = true;
+            }
             streamBuffer += token;
 
             // Detect tool tag start (only once per pass)
@@ -179,16 +246,26 @@ export function useChatSession() {
               const detected = detectActiveTool(streamBuffer);
               if (detected) {
                 activeTool = detected;
-                updateLastAiMessage(TOOL_STATUS_LABELS[detected], false);
+                // Capture any text the model wrote before the tool tag
+                const tagStart = streamBuffer.indexOf(`<${detected}>`);
+                const preToolText = tagStart > 0
+                  ? streamBuffer.slice(0, tagStart).replace(/<end_of_turn>/g, '').trim()
+                  : '';
+                // Show: [previous passes] + pre-tool text + newline + status placeholder
+                const statusLine = TOOL_STATUS_LABELS[detected];
+                updateLastAiMessage(
+                  uiPrefix + (preToolText ? preToolText + '\n' : '') + statusLine,
+                  false,
+                );
               }
             }
 
             if (!activeTool) {
-              // Normal streaming — show text to user
+              // Normal streaming — show text to user, prefixed with prior pass content
               const cleanBuffer = streamBuffer.replace(/<end_of_turn>/g, '');
-              updateLastAiMessage(cleanBuffer, false);
+              updateLastAiMessage(uiPrefix + cleanBuffer, false);
             }
-            // If tool detected, drain the stream silently until native is done
+            // If tool detected, drain the stream silently until complete
           }
 
           const finalCleanBuffer = streamBuffer.replace(/<end_of_turn>/g, '').trim();
@@ -199,19 +276,27 @@ export function useChatSession() {
             const tagRegex = new RegExp(`<${toolInBuffer}>([\\s\\S]*?)<\\/${toolInBuffer}>`);
             const match = streamBuffer.match(tagRegex);
             if (match?.[1]) {
+              // Build the prefix that next pass will prepend to its streamed tokens
+              const tagStart = streamBuffer.indexOf(`<${toolInBuffer}>`);
+              const preToolText = tagStart > 0
+                ? streamBuffer.slice(0, tagStart).replace(/<end_of_turn>/g, '').trim()
+                : '';
+              const statusLine = TOOL_STATUS_LABELS[toolInBuffer];
+              uiPrefix += (preToolText ? preToolText + '\n' : '') + statusLine + '\n';
+
               const result = await dispatchTool(toolInBuffer, match[1]);
               injectedToolContext += `\n[Tool: ${toolInBuffer}] Result:\n${result}\n\n[System]: Use the above result to answer Dre naturally. Do not mention tool use.`;
               // Continue to Pass N+1 with the result injected
             } else {
               // Malformed tag — fall through
-              updateLastAiMessage(finalCleanBuffer, true);
-              finalUiText = finalCleanBuffer;
+              updateLastAiMessage(uiPrefix + finalCleanBuffer, true);
+              finalUiText = uiPrefix + finalCleanBuffer;
               isComplete = true;
             }
           } else {
             // Stream naturally finished — no more tool calls
-            updateLastAiMessage(finalCleanBuffer, true);
-            finalUiText = finalCleanBuffer;
+            updateLastAiMessage(uiPrefix + finalCleanBuffer, true);
+            finalUiText = uiPrefix + finalCleanBuffer;
             isComplete = true;
           }
         }
@@ -220,16 +305,27 @@ export function useChatSession() {
           await insertMessage(sessionId, 'ai', finalUiText).catch(() => null);
         }
       } catch (err: any) {
-        console.error('Generation Error:', err);
-        const errorMessage = err?.message || 'Something went wrong.';
-        updateLastAiMessage(`[Error] ${errorMessage}`, true);
+        if (!cancelRef.current) {
+          console.error('Generation Error:', err);
+          const errorMessage = err?.message || 'Something went wrong.';
+          updateLastAiMessage(`[Error] ${errorMessage}`, true);
+        }
       } finally {
         streamingRef.current = false;
+        cancelRef.current = false;
         setOrbActive(false);
       }
     },
-    [inputText, sessionId, addMessage, updateLastAiMessage, setOrbActive, setInputText]
+    [inputText, sessionId, lumenMode, debugMode, addMessage, updateLastAiMessage, setOrbActive, setInputText]
   );
+
+  const startNewSession = useCallback(() => {
+    cancelRef.current = true;
+    streamingRef.current = false;
+    setOrbActive(false);
+    useNexusStore.getState().clearMessages();
+    llmProvider.resetConversation?.();
+  }, [setOrbActive]);
 
   return {
     messages,
@@ -237,6 +333,7 @@ export function useChatSession() {
     inputText,
     setInputText,
     sendMessage,
+    startNewSession,
   };
 }
 

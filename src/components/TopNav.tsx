@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter, usePathname } from 'expo-router';
 import * as Network from 'expo-network';
 import { colors } from '@/theme/colors';
@@ -19,9 +20,7 @@ export function TopNav() {
   const { status, modelName } = useLLMStore();
   const { lumenMode } = useNexusStore();
   
-  console.log('[DEBUG] TopNav lumenMode:', lumenMode);
-
-  const [isConnected, setIsConnected] = useState(true);
+const [isConnected, setIsConnected] = useState(true);
   const [networkToast, setNetworkToast] = useState<'connected' | 'disconnected' | null>(null);
   const isInitialMount = useRef(true);
 
@@ -95,8 +94,9 @@ export function TopNav() {
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
       {statusText && (
-        <View style={styles.statusContainer}>
+        <View style={styles.statusRow}>
           <Text style={styles.statusText}>{statusText}</Text>
+          {lumenMode && <Ionicons name="wifi" size={10} color={colors.cyan} style={styles.wifiIcon} />}
         </View>
       )}
       <GradientBorder radius={100} innerBg="rgba(8,10,18,0.55)" colors={borderColors}>
@@ -130,13 +130,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 10,
   },
+  statusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 6,
+  },
+  wifiIcon: {
+    opacity: 0.7,
+  },
   statusText: {
     fontFamily: fonts.mono,
     fontSize: fontSizes.xxs,
     color: colors.cyan,
     opacity: 0.7,
     letterSpacing: 1,
-    marginBottom: 6,
     textTransform: 'uppercase',
   },
   pill: {

@@ -18,8 +18,11 @@ export const lumixLLMNative = _native;
 export const lumixLLMEmitter = _emitter;
 
 export interface LumixLLMNative {
-  load(modelPath: string, maxTokens: number, temperature: number): Promise<void>;
-  generate(prompt: string): void;
+  load(modelPath: string, systemPrompt: string): Promise<void>;
+  generate(userMessage: string, dynamicContext: string): void;
   stop(): void;
+  resetConversation(): void;
   unload(): void;
+  lumenGenerate(messagesJson: string, model: string, apiKey: string, temperature: number, maxTokens: number): void;
+  lumenStop(): void;
 }
